@@ -2,15 +2,14 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 
-SMOOTHING_RADIUS = 20
-
 
 def plot_img_with_points(img, points):
     corners = np.int0(points)
     print(corners.shape)
+    color = (0, 0, 255)  # color in BGR
     for i in corners:
         x, y = i.ravel()
-        cv2.circle(img, (x, y), 3, 255, -1)
+        cv2.circle(img, (x, y), 5, color, -1)
     plt.imshow(img)
     plt.show()
 
@@ -50,9 +49,9 @@ def movingAverage(curve, radius):
     # Remove padding
     curve_smoothed = curve_smoothed[radius:-radius]
     # return smoothed curve
-    # plt.plot(curve, label='original curve')
-    # plt.plot(curve_smoothed, label='smoothed curve')
-    # plt.show()
+    plt.plot(curve, label='original curve')
+    plt.plot(curve_smoothed, label='smoothed curve')
+    plt.show()
     return curve_smoothed
 
 

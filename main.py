@@ -1,10 +1,10 @@
 from video_stabilization import stabilize_video
 
-MAX_CORNERS = 200
-QUALITY_LEVEL = 0.01
-MIN_DISTANCE = 30
-BLOCK_SIZE = 50
-SMOOTH_RADIUS = 50
+MAX_CORNERS = 1000
+QUALITY_LEVEL = 0.001
+MIN_DISTANCE = 20
+BLOCK_SIZE = 20
+SMOOTH_RADIUS = 2
 
 good_features_to_track_params = {
     'maxCorners': MAX_CORNERS,

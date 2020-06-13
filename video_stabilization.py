@@ -12,7 +12,7 @@ def fixBorder(frame):
     return frame
 
 
-def stabilize_video(input_video_path, output_video_path,good_features_to_track,smooth_radius):
+def stabilize_video(input_video_path, output_video_path, good_features_to_track, smooth_radius):
     # Read input video
     # cap = cv2.VideoCapture(input_video_path)
     cap, out = get_video_files(input_video_path, output_video_path, isColor=True)
@@ -54,7 +54,7 @@ def stabilize_video(input_video_path, output_video_path,good_features_to_track,s
 
         # Calculate optical flow (i.e. track feature points)
         curr_pts, status, err = cv2.calcOpticalFlowPyrLK(prev_gray, curr_gray, prev_pts, None)
-
+        print(np.sum(err))
         # Sanity check
         assert prev_pts.shape == curr_pts.shape
 
@@ -84,7 +84,7 @@ def stabilize_video(input_video_path, output_video_path,good_features_to_track,s
     # Compute trajectory using cumulative sum of transformations
     trajectory = np.cumsum(transforms, axis=0)
 
-    smoothed_trajectory = smooth(trajectory,smooth_radius)
+    smoothed_trajectory = smooth(trajectory, smooth_radius)
     # Calculate difference in smoothed_trajectory and trajectory
     difference = smoothed_trajectory - trajectory
 
