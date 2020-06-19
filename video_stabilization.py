@@ -16,6 +16,7 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
     # Read input video
     # cap = cv2.VideoCapture(input_video_path)
     cap, out = get_video_files(input_video_path, output_video_path, isColor=True)
+    backSub = cv2.createBackgroundSubtractorKNN()
 
     # Get frame count
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -33,9 +34,9 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
     # Convert frame to grayscale
     prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
     # Pre-define transformation-store array
-    transforms = np.zeros((n_frames - 1, 3), np.float32)
+    transforms = np.zeros((n_frames - 1, 9), np.float32)
 
-    for i in range(n_frames - 2):
+    for i in range(n_frames):
         # Detect feature points in previous frame
         prev_pts = cv2.goodFeaturesToTrack(prev_gray,
                                            maxCorners=good_features_to_track['maxCorners'],
@@ -64,17 +65,10 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
         curr_pts = curr_pts[idx]
 
         # Find transformation matrix
-        m = cv2.estimateRigidTransform(prev_pts, curr_pts, fullAffine=False)  # will only work with OpenCV-3 or less
-        #         m = cv2.estimateAffine2D(prev_pts, curr_pts)
-        # Extract traslation
-        dx = m[0, 2]
-        dy = m[1, 2]
-
-        # Extract rotation angle
-        da = np.arctan2(m[1, 0], m[0, 0])
+        m, _ = cv2.findHomography(prev_pts, curr_pts)  # will only work with OpenCV-3 or less
 
         # Store transformation
-        transforms[i] = [dx, dy, da]
+        transforms[i] = m.flatten()  # [m[0, 0], m[0, 1], m[0, 2], m[1, 0], m[1, 1], m[1, 2],]
 
         # Move to next frame
         prev_gray = curr_gray
@@ -94,31 +88,42 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
     # Write n_frames-1 transformed frames
-    for i in range(n_frames - 2):
+    for i in range(n_frames):
         # Read next frame
         success, frame = cap.read()
         if not success:
             break
 
-        # Extract transformations from the new transformation array
-        dx = transforms_smooth[i, 0]
-        dy = transforms_smooth[i, 1]
-        da = transforms_smooth[i, 2]
+        # # Extract transformations from the new transformation array
+        # dx = transforms_smooth[i, 0]
+        # dy = transforms_smooth[i, 1]
+        # da = transforms_smooth[i, 2]
+        #
+        # # Reconstruct transformation matrix accordingly to new values
+        # m = np.zeros((2, 3), np.float32)
+        # m[0, 0] = np.cos(da)
+        # m[0, 1] = -np.sin(da)
+        # m[1, 0] = np.sin(da)
+        # m[1, 1] = np.cos(da)
+        # m[0, 2] = dx
+        # m[1, 2] = dy
 
-        # Reconstruct transformation matrix accordingly to new values
-        m = np.zeros((2, 3), np.float32)
-        m[0, 0] = np.cos(da)
-        m[0, 1] = -np.sin(da)
-        m[1, 0] = np.sin(da)
-        m[1, 1] = np.cos(da)
-        m[0, 2] = dx
-        m[1, 2] = dy
+        # # Reconstruct transformation matrix accordingly to new values
+        # m = np.zeros((2, 3), np.float32)
+        # m[0, 0] = transforms_smooth[i, 0]
+        # m[0, 1] = transforms_smooth[i, 1]
+        # m[1, 0] = transforms_smooth[i, 2]
+        # m[1, 1] = transforms_smooth[i, 3]
+        # m[0, 2] = transforms_smooth[i, 4]
+        # m[1, 2] = transforms_smooth[i, 5]
 
         # Apply affine wrapping to the given frame
-        frame_stabilized = cv2.warpAffine(frame, m, (w, h))
+        if i == 0:
+            frame_stabilized = frame
+        else:
+            m = transforms_smooth[i - 1].reshape((3, 3))
+            frame_stabilized = cv2.warpPerspective(frame, m, (w, h))
 
-        # Fix border artifacts
-        frame_stabilized = fixBorder(frame_stabilized)
 
         # Write the frame to the file
         # frame_out = cv2.hconcat([frame, frame_stabilized])

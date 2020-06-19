@@ -16,7 +16,7 @@ def plot_img_with_points(img, points):
 
 def get_video_files(path, output_name, isColor):
     cap = cv2.VideoCapture(path)
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Define video codec
+    fourcc = cv2.VideoWriter_fourcc(*'MPEG')  # Define video codec
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -49,9 +49,9 @@ def movingAverage(curve, radius):
     # Remove padding
     curve_smoothed = curve_smoothed[radius:-radius]
     # return smoothed curve
-    plt.plot(curve, label='original curve')
-    plt.plot(curve_smoothed, label='smoothed curve')
-    plt.show()
+    # plt.plot(curve, label='original curve')
+    # plt.plot(curve_smoothed, label='smoothed curve')
+    # plt.show()
     return curve_smoothed
 
 
@@ -64,7 +64,7 @@ def smooth(trajectory, smooth_radius):
     """
     smoothed_trajectory = np.copy(trajectory)
     # Filter the x, y and angle curves
-    for i in range(3):
+    for i in range(9):
         smoothed_trajectory[:, i] = movingAverage(trajectory[:, i], radius=smooth_radius)
 
     return smoothed_trajectory
