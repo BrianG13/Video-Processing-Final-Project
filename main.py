@@ -2,9 +2,9 @@ from video_stabilization import stabilize_video
 
 MAX_CORNERS = 500
 QUALITY_LEVEL = 0.01
-MIN_DISTANCE = 20
-BLOCK_SIZE = 5
-SMOOTH_RADIUS = 50
+MIN_DISTANCE = 30
+BLOCK_SIZE = 3
+SMOOTH_RADIUS = 5
 
 good_features_to_track_params = {
     'maxCorners': MAX_CORNERS,

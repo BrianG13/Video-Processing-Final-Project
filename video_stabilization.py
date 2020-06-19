@@ -45,6 +45,7 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
                                            blockSize=good_features_to_track['blockSize'])
         # plot_img_with_points(prev_gray, prev_pts)
 
+
         # Read next frame
         success, curr = cap.read()
         if not success:
@@ -55,7 +56,6 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
 
         # Calculate optical flow (i.e. track feature points)
         curr_pts, status, err = cv2.calcOpticalFlowPyrLK(prev_gray, curr_gray, prev_pts, None)
-        print(np.sum(err))
         # Sanity check
         assert prev_pts.shape == curr_pts.shape
 
@@ -134,6 +134,7 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
 
         # cv2.imshow("Before and After", frame_out)
         # cv2.waitKey(10)
+        frame_stabilized = fixBorder(frame_stabilized)
         out.write(frame_stabilized)
 
     release_video_files(cap, out)

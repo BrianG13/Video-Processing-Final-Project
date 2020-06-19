@@ -16,7 +16,7 @@ def plot_img_with_points(img, points):
 
 def get_video_files(path, output_name, isColor):
     cap = cv2.VideoCapture(path)
-    fourcc = cv2.VideoWriter_fourcc(*'MPEG')  # Define video codec
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Define video codec
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
