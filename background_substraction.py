@@ -130,11 +130,12 @@ def background_substraction(input_video_path, output_video_path):
         mask_or = (mask_s | mask_v).astype(np.uint8)
         mask_s = mask_s.astype(np.uint8) * 255
         mask_v = mask_v.astype(np.uint8) * 255
-        weighted_mask = (0.5 * (diff_s - np.mean(diff_s) * 5) + 0.5 * (diff_v - np.mean(diff_v) * 7) > 0).astype(np.uint8) * 255
+        weighted_mask = (0.5 * (diff_s - np.mean(diff_s) * 5) + 0.5 * (diff_v - np.mean(diff_v) * 7) > 0).astype(
+            np.uint8) * 255
 
         kernel = np.ones((7, 7), np.uint8)
         dilation = cv2.dilate(mask_or, kernel, iterations=1)
-        blue_mask = (diff_b > np.mean(diff_b)*1.5).astype(np.uint8) * 255
+        blue_mask = (diff_b > np.mean(diff_b) * 1.5).astype(np.uint8) * 255
 
         frame_after_or_flt = np.copy(curr)
         frame_after_or_flt[:, :, 0] = frame_after_or_flt[:, :, 0] * dilation
@@ -142,7 +143,6 @@ def background_substraction(input_video_path, output_video_path):
         frame_after_or_flt[:, :, 2] = frame_after_or_flt[:, :, 2] * dilation
         original_with_or_mask_out.write(frame_after_or_flt)
         dilation *= 255
-
 
         '''EROISON'''
         # kernel = np.ones((10, 5), np.uint8)
@@ -201,4 +201,64 @@ def background_substraction(input_video_path, output_video_path):
     release_video_files(cap, out)
 
 
+def continue_background_substraction(input_video_path, output_video_path):
+    # Read input video
+    cap, out = get_video_files(input_video_path, output_video_path, isColor=True)
+    # Get frame count
+    n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    # Get width and height of video stream
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
+    # Read first frame
+    _, prev = cap.read()
+    # Convert frame to grayscale
+    prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
+    # Pre-define transformation-store array
+    frames_bgr = [prev]  # MEDIAN TRY
+    for i in range(n_frames):
+        print("Frame: " + str(i) + "/" + str(n_frames))
+        # Read next frame
+        success, curr = cap.read()
+        if not success:
+            break
+        frames_bgr.append(curr)
+
+    frames_bgr = np.asarray(frames_bgr)
+    medians_frame_bgr = np.median(frames_bgr, axis=0)
+    medians_frame_b, _, _ = cv2.split(medians_frame_bgr)
+
+    out_size = (w, h)
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Define video codec
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    after_or_using_blue_out = cv2.VideoWriter('after_or_using_blue.avi', fourcc, fps, out_size, isColor=True)
+    blue_mask_out = cv2.VideoWriter('blue_mask_out.avi', fourcc, fps, out_size, isColor=False)
+
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    for i in range(n_frames):
+        success, curr = cap.read()
+        if not success:
+            break
+        curr_b, _, _ = cv2.split(curr)
+        diff_b = np.abs(medians_frame_b - curr_b).astype(np.uint8)
+
+        kernel = np.ones((4, 4), np.uint8)
+        # dilation = cv2.dilate(mask_or, kernel, iterations=1)
+        blue_mask = (curr_b < 140).astype(np.uint8)
+        blue_mask = cv2.erode(blue_mask, kernel, iterations=2)
+
+        # blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel)
+        # blue_mask = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
+
+        frame_after_or_after_blue = np.copy(curr)
+        frame_after_or_after_blue[:, :, 0] = frame_after_or_after_blue[:, :, 0] * blue_mask
+        frame_after_or_after_blue[:, :, 1] = frame_after_or_after_blue[:, :, 1] * blue_mask
+        frame_after_or_after_blue[:, :, 2] = frame_after_or_after_blue[:, :, 2] * blue_mask
+        out.write(frame_after_or_after_blue)
+        blue_mask = 1 - blue_mask
+        blue_mask *= 255
+        blue_mask_out.write(blue_mask)
+
+    after_or_using_blue_out.release()
+    blue_mask_out.release()
+    release_video_files(cap, out)
