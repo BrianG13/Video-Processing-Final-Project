@@ -75,3 +75,19 @@ def smooth(trajectory, smooth_radius):
         smoothed_trajectory[:, i] = movingAverage(trajectory[:, i], radius=smooth_radius)
 
     return smoothed_trajectory
+
+# font = cv2.FONT_HERSHEY_SIMPLEX
+# bottomLeftCornerOfText = (10, 50)
+# fontScale = 3
+# fontColor = (255, 255, 255)
+# lineType = 2
+#
+# cv2.putText(weighted_mask, str(i),
+#             bottomLeftCornerOfText,
+#             font,
+#             fontScale,
+#             fontColor,
+#             lineType)
+#
+# cv2.imshow('s',weighted_mask)
+# cv2.waitKey(0)

@@ -98,13 +98,20 @@ def background_substraction(input_video_path, output_video_path):
     s_out = cv2.VideoWriter('s_results.avi', fourcc, fps, out_size, isColor=False)
     v_out = cv2.VideoWriter('v_results.avi', fourcc, fps, out_size, isColor=False)
     b_out = cv2.VideoWriter('b_results.avi', fourcc, fps, out_size, isColor=False)
+    blue_mask_out = cv2.VideoWriter('blue_mask_out.avi', fourcc, fps, out_size, isColor=False)
+
     # g_out = cv2.VideoWriter('g_results.avi', fourcc, fps, out_size, isColor=False)
     # r_out = cv2.VideoWriter('r_results.avi', fourcc, fps, out_size, isColor=False)
     # mask_s_out = cv2.VideoWriter('mask_s.avi', fourcc, fps, out_size, isColor=False)
     # mask_v_out = cv2.VideoWriter('mask_v.avi', fourcc, fps, out_size, isColor=False)
     mask_weighted_out = cv2.VideoWriter('mask_weighted.avi', fourcc, fps, out_size, isColor=False)
+    mask_or_out = cv2.VideoWriter('mask_or.avi', fourcc, fps, out_size, isColor=False)
+    original_with_or_mask_out = cv2.VideoWriter('original_with_or_mask.avi', fourcc, fps, out_size, isColor=True)
 
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+    frames_after_or_filter = []
+
     for i in range(n_frames):
         success, curr = cap.read()
         if not success:
@@ -113,40 +120,54 @@ def background_substraction(input_video_path, output_video_path):
         curr_h, curr_s, curr_v = cv2.split(curr_hsv)
         curr_b, curr_g, curr_r = cv2.split(curr)
         # diff_h = np.abs(medians_frame_h-curr_h).astype(np.uint8)
-        diff_s = np.abs(medians_frame_s-curr_s).astype(np.uint8)
-        diff_v = np.abs(medians_frame_v-curr_v).astype(np.uint8)
-        diff_b = np.abs(medians_frame_b-curr_b).astype(np.uint8)
+        diff_s = np.abs(medians_frame_s - curr_s).astype(np.uint8)
+        diff_v = np.abs(medians_frame_v - curr_v).astype(np.uint8)
+        diff_b = np.abs(medians_frame_b - curr_b).astype(np.uint8)
         # diff_g = np.abs(medians_frame_g-curr_g).astype(np.uint8)
         # diff_r = np.abs(medians_frame_r-curr_r).astype(np.uint8)
-        # mask_s = (diff_s > np.mean(diff_s)*5).astype(np.uint8) * 255
-        # mask_v = (diff_v > np.mean(diff_v)*7).astype(np.uint8) * 255
-        weighted_mask = (diff_s - np.mean(diff_s) * 5 + 0.2*(diff_v - np.mean(diff_v) * 7) > 0).astype(np.uint8) * 255
+        mask_s = (diff_s > np.mean(diff_s) * 5)
+        mask_v = (diff_v > np.mean(diff_v) * 5)
+        mask_or = (mask_s | mask_v).astype(np.uint8)
+        mask_s = mask_s.astype(np.uint8) * 255
+        mask_v = mask_v.astype(np.uint8) * 255
+        weighted_mask = (0.5 * (diff_s - np.mean(diff_s) * 5) + 0.5 * (diff_v - np.mean(diff_v) * 7) > 0).astype(np.uint8) * 255
+
+        kernel = np.ones((7, 7), np.uint8)
+        dilation = cv2.dilate(mask_or, kernel, iterations=1)
+        blue_mask = (diff_b > np.mean(diff_b)*1.5).astype(np.uint8) * 255
+
+        frame_after_or_flt = np.copy(curr)
+        frame_after_or_flt[:, :, 0] = frame_after_or_flt[:, :, 0] * dilation
+        frame_after_or_flt[:, :, 1] = frame_after_or_flt[:, :, 1] * dilation
+        frame_after_or_flt[:, :, 2] = frame_after_or_flt[:, :, 2] * dilation
+        original_with_or_mask_out.write(frame_after_or_flt)
+        dilation *= 255
+
+
+        '''EROISON'''
+        # kernel = np.ones((10, 5), np.uint8)
+        # mask_or_erosion = cv2.erode(mask_or, kernel, iterations=1)
+        # # Write the frame to the file
+        # concat_frame = cv2.hconcat([mask_or, mask_or_erosion])
+        # # If the image is too big, resize it.
+        # if concat_frame.shape[1] > 1920:
+        #     concat_frame = cv2.resize(concat_frame, (int(concat_frame.shape[1]), int(concat_frame.shape[0])))
+        # cv2.imshow("Before and After", concat_frame)
+        # cv2.waitKey(0)
+        '''EROISON - END'''
 
         # h_out.write(diff_h)
         s_out.write(diff_s)
         v_out.write(diff_v)
         b_out.write(diff_b)
+        blue_mask_out.write(blue_mask)
         # g_out.write(diff_g)
         # r_out.write(diff_r)
         # mask_s_out.write(mask_s)
         # mask_v_out.write(mask_v)
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        bottomLeftCornerOfText = (10, 50)
-        fontScale = 3
-        fontColor = (255, 255, 255)
-        lineType = 2
-
-        cv2.putText(weighted_mask, str(i),
-                    bottomLeftCornerOfText,
-                    font,
-                    fontScale,
-                    fontColor,
-                    lineType)
-
-        cv2.imshow('s',weighted_mask)
-        cv2.waitKey(0)
         mask_weighted_out.write(weighted_mask)
 
+        mask_or_out.write(dilation)
         # print(f'mean of s: {np.mean(diff_s)}')
 
     # h_out.release()
@@ -158,6 +179,9 @@ def background_substraction(input_video_path, output_video_path):
     # mask_s_out.release()
     # mask_v_out.release()
     mask_weighted_out.release()
+    mask_or_out.release()
+    original_with_or_mask_out.release()
+    blue_mask_out.release()
 
     '''OPTICAL FLOW TRY'''
     # out_size = (w, h)
@@ -175,3 +199,6 @@ def background_substraction(input_video_path, output_video_path):
     '''OPTICAL FLOW TRY - end'''
 
     release_video_files(cap, out)
+
+
+
