@@ -43,14 +43,21 @@ def movingAverage(curve, radius):
     # Define the filter
     f = np.ones(window_size) / window_size
     # Add padding to the boundaries
-    curve_pad = np.lib.pad(curve, (radius, radius), 'edge')
+    curve_pad = np.lib.pad(curve, (radius, radius), 'reflect')
     # Apply convolution
+    for i in range(radius):
+        curve_pad[i] = curve_pad[radius] - curve_pad[i]
+
+    for i in range(len(curve_pad) - 1, len(curve_pad) - 1 - radius, -1):
+        curve_pad[i] = curve_pad[len(curve_pad)-radius-1] - curve_pad[i]
+
     curve_smoothed = np.convolve(curve_pad, f, mode='same')
     # Remove padding
     curve_smoothed = curve_smoothed[radius:-radius]
     # return smoothed curve
     # plt.plot(curve, label='original curve')
     # plt.plot(curve_smoothed, label='smoothed curve')
+    # plt.legend()
     # plt.show()
     return curve_smoothed
 
@@ -64,7 +71,7 @@ def smooth(trajectory, smooth_radius):
     """
     smoothed_trajectory = np.copy(trajectory)
     # Filter the x, y and angle curves
-    for i in range(9):
+    for i in range(smoothed_trajectory.shape[1]):
         smoothed_trajectory[:, i] = movingAverage(trajectory[:, i], radius=smooth_radius)
 
     return smoothed_trajectory

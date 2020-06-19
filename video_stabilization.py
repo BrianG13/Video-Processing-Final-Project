@@ -16,7 +16,6 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
     # Read input video
     # cap = cv2.VideoCapture(input_video_path)
     cap, out = get_video_files(input_video_path, output_video_path, isColor=True)
-    backSub = cv2.createBackgroundSubtractorKNN()
 
     # Get frame count
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -86,9 +85,14 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
     transforms_smooth = transforms + difference
     # Reset stream to first frame
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    for i in range(transforms_smooth.shape[1]):
+        plt.plot(transforms_smooth[:, i], label='transforms_smooth ')
+        plt.plot(transforms[:, i], label='transforms')
+        plt.legend()
+        plt.show()
 
     # Write n_frames-1 transformed frames
-    for i in range(n_frames):
+    for i in range(n_frames-1):
         # Read next frame
         success, frame = cap.read()
         if not success:
@@ -120,9 +124,11 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
         # Apply affine wrapping to the given frame
         if i == 0:
             frame_stabilized = frame
-        else:
-            m = transforms_smooth[i - 1].reshape((3, 3))
-            frame_stabilized = cv2.warpPerspective(frame, m, (w, h))
+            out.write(frame_stabilized)
+
+        m = transforms_smooth[i].reshape((3, 3))
+
+        frame_stabilized = cv2.warpPerspective(frame, m, (w, h))
 
 
         # Write the frame to the file
