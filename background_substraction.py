@@ -245,7 +245,7 @@ def continue_background_substraction(input_video_path, output_video_path):
         kernel = np.ones((4, 4), np.uint8)
         # dilation = cv2.dilate(mask_or, kernel, iterations=1)
         blue_mask = (curr_b < 140).astype(np.uint8)
-        blue_mask = cv2.erode(blue_mask, kernel, iterations=2)
+        blue_mask = cv2.erode(blue_mask, kernel, iterations=2).astype(np.uint8)
 
         # blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel)
         # blue_mask = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
