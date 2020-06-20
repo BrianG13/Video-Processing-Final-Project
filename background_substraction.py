@@ -15,8 +15,6 @@ from kernel_estimation import (
     estimate_pdf
 )
 
-import time
-
 def background_substraction(input_video_path, output_video_path):
     # Read input video
     cap, out, w, h, fps = get_video_files(input_video_path, output_video_path, isColor=True)
@@ -35,34 +33,22 @@ def background_substraction(input_video_path, output_video_path):
     # medians_frame_hsv = np.median(frames_hsv, axis=0)
     # medians_frame_h, medians_frame_s, medians_frame_v = cv2.split(medians_frame_hsv)
 
-    medians_frame_b = np.load('blue_median_frame.dat',allow_pickle=True)
-    medians_frame_g = np.load('green_median_frame.dat',allow_pickle=True)
-    medians_frame_r = np.load('red_median_frame.dat',allow_pickle=True)
-    medians_frame_h = np.load('hue_median_frame.dat',allow_pickle=True)
-    medians_frame_s = np.load('saturation_median_frame.dat',allow_pickle=True)
-    medians_frame_v = np.load('value_median_frame.dat',allow_pickle=True)
+    medians_frame_b = np.load('blue_median_frame.dat', allow_pickle=True)
+    medians_frame_g = np.load('green_median_frame.dat', allow_pickle=True)
+    medians_frame_r = np.load('red_median_frame.dat', allow_pickle=True)
+    medians_frame_h = np.load('hue_median_frame.dat', allow_pickle=True)
+    medians_frame_s = np.load('saturation_median_frame.dat', allow_pickle=True)
+    medians_frame_v = np.load('value_median_frame.dat', allow_pickle=True)
 
     s_diff_from_median_list, v_diff_from_median_list, b_diff_from_median_list = [], [], []
     mask_s_list, mask_v_list, blue_mask_list, mask_or_list, mask_weighted_list = [], [], [], [], []
     original_with_or_mask_results, original_with_or_mask_and_blue_results = [], []
-    probs_mask_list = []
-
+    probs_mask_after_closing_list = []
+    probs_mask_eroison_list = []
+    contour_color_list = []
     mask = frame_92(frames_bgr[92])
-    # cv2.imshow('sas', scale_matrix_0_to_255(mask))
-    # cv2.waitKey(0)
     omega_f_indices = choose_indices_for_foreground(mask, 200)
-    # image = np.copy(frames_bgr[92])
-    # for index in range(omega_f_indices.shape[0]):
-    #     image = cv2.circle(image, (omega_f_indices[index][1], omega_f_indices[index][0]), 5, (0, 255, 0), 2)
-    # cv2.imshow('sas', image)
-    # cv2.waitKey(0)
-
     omega_b_indices = choose_indices_for_background(mask, 200)
-    # image = np.copy(frames_bgr[92])
-    # for index in range(omega_b_indices.shape[0]):
-    #     image = cv2.circle(image, (omega_b_indices[index][1], omega_b_indices[index][0]), 5, (0, 255, 0), 2)
-    # cv2.imshow('sas', image)
-    # cv2.waitKey(0)
 
     foreground_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_f_indices)
     background_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_b_indices)
@@ -104,77 +90,51 @@ def background_substraction(input_video_path, output_video_path):
         # original_with_or_mask_and_blue_results.append(frame_after_or_and_blue_flt)
         '''END OF BIG COMMENT'''
 
-
-
-        # print('FOREGROUND PDF!')
-        # print(f'black: {foreground_pdf(np.asarray([0,0,0]).T)}')
-        # print(f'red: {foreground_pdf(np.asarray([100,100,255]).T)}')
-        # print(f'blue: {foreground_pdf(np.asarray([255,0,0]).T)}')
-        # print(f'green: {foreground_pdf(np.asarray([0,255,0]).T)}')
-        # print(f'white: {foreground_pdf(np.asarray([255,255,255]).T)}')
-        # print(f'shirt: {foreground_pdf(np.asarray([54,41,71]).T)}')
-        # print(f'shoe: {foreground_pdf(np.asarray([90,90,90]).T)}')
-        # print('BACKGROUND PDF!')
-        # print(f'black: {background_pdf(np.asarray([0,0,0]).T)}')
-        # print(f'red: {background_pdf(np.asarray([100,100,255]).T)}')
-        # print(f'blue: {background_pdf(np.asarray([255,0,0]).T)}')
-        # print(f'green: {background_pdf(np.asarray([0,255,0]).T)}')
-        # print(f'white: {background_pdf(np.asarray([255,255,255]).T)}')
-        # print(f'shirt: {background_pdf(np.asarray([54,41,71]).T)}')
-        # print(f'shoe: {background_pdf(np.asarray([90,90,90]).T)}')
-
-        row_stacked_original_frame = curr.reshape((h*w),3)
-        now = time.time()
-        foreground_probabilities = np.fromiter(map(lambda elem: check_in_dict(foreground_memory,elem,foreground_pdf),
-                                         map(tuple, row_stacked_original_frame)),dtype=float)
-        foreground_probabilities = foreground_probabilities.reshape((h,w))
-        background_probabilities = np.fromiter(map(lambda elem: check_in_dict(background_memory,elem,background_pdf),
-                                         map(tuple, row_stacked_original_frame)),dtype=float)
-        background_probabilities = background_probabilities.reshape((h,w))
-        print(f'background mem size: {len(background_memory)}')
-        print(f'foreground mem size: {len(foreground_memory)}')
-        print(f'time for probs : {time.time()-now}')
+        row_stacked_original_frame = curr.reshape((h * w), 3)
+        foreground_probabilities = np.fromiter(map(lambda elem: check_in_dict(foreground_memory, elem, foreground_pdf),
+                                                   map(tuple, row_stacked_original_frame)), dtype=float)
+        foreground_probabilities = foreground_probabilities.reshape((h, w))
+        background_probabilities = np.fromiter(map(lambda elem: check_in_dict(background_memory, elem, background_pdf),
+                                                   map(tuple, row_stacked_original_frame)), dtype=float)
+        background_probabilities = background_probabilities.reshape((h, w))
 
         probs_mask = foreground_probabilities > background_probabilities
         probs_mask = probs_mask.astype(np.uint8) * 255
-        probs_mask_list.append(probs_mask)
-        cv2.imwrite(f'probs_mask_frame_{i}.png',probs_mask)
 
         probs_mask_eroison = cv2.erode(probs_mask, np.ones((3, 1), np.uint8), iterations=1)
         probs_mask_eroison = cv2.erode(probs_mask_eroison, np.ones((1, 3), np.uint8), iterations=1)
 
+        cv2.imwrite(f'probs_mask_eroison_frame_{i}.png', probs_mask_eroison)
+        probs_mask_eroison_list.append(probs_mask_eroison)
+
         # probs_mask_eroison = cv2.erode(probs_mask_eroison, np.ones((3, 1), np.uint8), iterations=1)
         # probs_mask_eroison = cv2.erode(probs_mask_eroison, np.ones((1, 4), np.uint8), iterations=1)
         closing = cv2.morphologyEx(probs_mask_eroison, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+        probs_mask_after_closing_list.append(closing)
+        cv2.imwrite(f'probs_mask_frame_closing_{i}.png', closing)
+
         img, contours, hierarchy = cv2.findContours(closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        contours = sorted(contours, key=cv2.contourArea,reverse=True)
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)
         cv2.drawContours(curr, contours, 0, (0, 255, 0), 3)
-        cv2.imwrite(f'countours_probs_{i}.png',curr)
-
-        cv2.imwrite(f'probs_mask_frame_eroded_{i}.png',closing)
-
-
-
-
-        # mask_s = scale_matrix_0_to_255(mask_s)
-        # mask_s_list.append(mask_s)
-        # mask_v = scale_matrix_0_to_255(mask_v)
-        # mask_v_list.append(mask_v)
-        # blue_mask = scale_matrix_0_to_255(blue_mask)
-        # blue_mask_list.append(blue_mask)
-        # dilation = scale_matrix_0_to_255(dilation)
-        # mask_or_list.append(dilation)
-        # mask_weighted_list.append(weighted_mask)
+        cv2.imwrite(f'countours_probs_{i}.png', curr)
+        contour_mask = np.zeros((h, w))  # create a single channel 200x200 pixel black image
+        cv2.fillPoly(contour_mask, pts=[contours[0]], color=1)
+        cv2.imwrite(f'filled_countour_img_{i}.png', scale_matrix_0_to_255(contour_mask))
+        contour_color_image = apply_mask_on_color_frame(curr, contour_mask)
+        contour_color_list.append(contour_color_image)
 
     # write_video('original_with_or_mask_and_blue.avi', frames=original_with_or_mask_and_blue_results, fps=fps, out_size=(w, h),
     #             is_color=True)
-    write_video('probs_mask.avi', frames=probs_mask_list, fps=fps, out_size=(w, h),is_color=False)
+    write_video('probs_mask_after_erosion_before_closing.avi', frames=probs_mask_eroison_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('probs_mask_after_closing.avi', frames=probs_mask_after_closing_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('original_only_contour.avi', frames=contour_color_list, fps=fps, out_size=(w, h), is_color=True)
+
     release_video_files(cap, out)
 
 
 def frame_92(curr):
-    medians_frame_s = np.load('saturation_median_frame.dat',allow_pickle=True)
-    medians_frame_v = np.load('value_median_frame.dat',allow_pickle=True)
+    medians_frame_s = np.load('saturation_median_frame.dat', allow_pickle=True)
+    medians_frame_v = np.load('value_median_frame.dat', allow_pickle=True)
     curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
     curr_h, curr_s, curr_v = cv2.split(curr_hsv)
     curr_b, curr_g, curr_r = cv2.split(curr)
@@ -190,14 +150,15 @@ def frame_92(curr):
     blue_kernel = np.ones((3, 3), np.uint8)
     blue_mask = cv2.erode(blue_mask, blue_kernel, iterations=2).astype(np.uint8)
 
-    final_mask = dilation*blue_mask
+    final_mask = dilation * blue_mask
     final_mask = cv2.erode(final_mask, np.ones((5, 5), np.uint8), iterations=4)
     # final_mask = cv2.erode(final_mask, np.ones((5, 1), np.uint8), iterations=3)
 
-    cv2.imwrite('frame92_msk.png',scale_matrix_0_to_255(final_mask))
+    cv2.imwrite('frame92_msk.png', scale_matrix_0_to_255(final_mask))
     return final_mask
 
-def check_in_dict(dict,element,function):
+
+def check_in_dict(dict, element, function):
     if element in dict:
         return dict[element]
     else:
