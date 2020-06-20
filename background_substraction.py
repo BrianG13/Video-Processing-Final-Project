@@ -1,21 +1,22 @@
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
-from utils import get_video_files, release_video_files, smooth, plot_img_with_points
+from utils import (
+    get_video_files,
+    release_video_files,
+    smooth,
+    plot_img_with_points,
+    write_video,
+    scale_matrix_0_to_255
+)
 
-
-# from Faster_Kmeans_master.Code.kmeans import Kmeans
 
 def background_substraction(input_video_path, output_video_path):
     # Read input video
     # cap = cv2.VideoCapture(input_video_path)
-    cap, out = get_video_files(input_video_path, output_video_path, isColor=True)
-
+    cap, out, w, h, fps = get_video_files(input_video_path, output_video_path, isColor=True)
     # Get frame count
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    # Get width and height of video stream
-    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     # Read first frame
     _, prev = cap.read()
@@ -23,8 +24,6 @@ def background_substraction(input_video_path, output_video_path):
     prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
     # Pre-define transformation-store array
 
-    u_results = []  ## OPTICAL FLOW
-    v_results = []  ## OPTICAL FLOW
     frames_bgr = [prev]  # MEDIAN TRY
     frames_hsv = [cv2.cvtColor(prev, cv2.COLOR_BGR2HSV)]
     for i in range(n_frames):
@@ -46,40 +45,6 @@ def background_substraction(input_video_path, output_video_path):
 
         # for every frame,
         # get current_frame_gray
-
-        '''Optical flow try'''
-        # farneback_params = {
-        #     'pyr_scale': 0.5,
-        #     'levels': 3,
-        #     'winsize': 15,
-        #     'iterations': 3,
-        #     'poly_n': 5,
-        #     'poly_sigma': 1.2,
-        #     'flags': cv2.OPTFLOW_USE_INITIAL_FLOW
-        # }
-        # flow = np.zeros((h, w, 2), dtype=np.float32)
-        # flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, flow, **farneback_params)
-        # u_results.append(flow[:,:,0])
-        # v_results.append(flow[:, :, 1])
-
-        # scaled_u = 255 * (flow[:, :, 0] - np.min(flow[:, :, 0])) / np.ptp(flow[:, :, 0])
-        # scaled_u = np.uint8(scaled_u)
-        # u_results.append(scaled_u)
-        # scaled_v = 255 * (flow[:, :, 1] - np.min(flow[:, :, 1])) / np.ptp(flow[:, :, 1])
-        # scaled_v = np.uint8(scaled_v)
-        # v_results.append(scaled_v)
-        # cv2.imshow('ImageWindow', u_matrix)
-        # cv2.waitKey(0)
-        '''Optical flow try - END'''
-
-        '''K-means try'''
-        # pointList = flow.reshape((h*w,2))
-        # pointList2 = pointList[::100,:]
-        # small = cv2.resize(prev_gray, (0, 0), fx=1/10, fy=1/10)
-        # cv2.imshow('small',small)
-        # cv2.waitKey(0)
-        # kmeans_result = Kmeans(2, pointList, 100)
-        '''K-means try - END'''
 
         # prev_gray = curr_gray
         continue
