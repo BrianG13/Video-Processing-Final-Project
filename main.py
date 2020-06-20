@@ -1,5 +1,5 @@
 from video_stabilization import stabilize_video
-from background_substraction import background_substraction, continue_background_substraction
+from background_substraction import background_substraction
 
 MAX_CORNERS = 500
 QUALITY_LEVEL = 0.01

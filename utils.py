@@ -86,6 +86,9 @@ def write_video(output_path, frames, fps, out_size, is_color):
 
 
 def scale_matrix_0_to_255(input_matrix):
+    if input_matrix.dtype == np.bool:
+        input_matrix = np.uint8(input_matrix)
+    input_matrix = input_matrix.astype(np.uint8)
     scaled = 255 * (input_matrix - np.min(input_matrix)) / np.ptp(input_matrix)
     return np.uint8(scaled)
 
