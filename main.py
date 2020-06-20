@@ -19,5 +19,5 @@ output_video_name = f'Stabilized_video_maxCorners{MAX_CORNERS}_qualityLevel{QUAL
                     f'_blockSize{BLOCK_SIZE}_radius{SMOOTH_RADIUS}.avi'
 output_path = f'{folder_name}/{output_video_name}'
 # stabilize_video('INPUT.avi', output_path, good_features_to_track_params, SMOOTH_RADIUS)
-# background_substraction('stabilized_video.avi','black_and_white.avi')
-continue_background_substraction('original_with_or_mask.avi', 'original_with_or_mask_and_blue_mask.avi')
+background_substraction('stabilized_video.avi','black_and_white.avi')
+# continue_background_substraction('original_with_or_mask.avi', 'original_with_or_mask_and_blue_mask.avi')

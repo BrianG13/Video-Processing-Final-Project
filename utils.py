@@ -49,7 +49,7 @@ def movingAverage(curve, radius):
         curve_pad[i] = curve_pad[radius] - curve_pad[i]
 
     for i in range(len(curve_pad) - 1, len(curve_pad) - 1 - radius, -1):
-        curve_pad[i] = curve_pad[len(curve_pad)-radius-1] - curve_pad[i]
+        curve_pad[i] = curve_pad[len(curve_pad) - radius - 1] - curve_pad[i]
 
     curve_smoothed = np.convolve(curve_pad, f, mode='same')
     # Remove padding
@@ -77,7 +77,7 @@ def smooth(trajectory, smooth_radius):
     return smoothed_trajectory
 
 
-def write_video(output_path,frames,fps,out_size,is_color):
+def write_video(output_path, frames, fps, out_size, is_color):
     fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Define video codec
     video_out = cv2.VideoWriter(output_path, fourcc, fps, out_size, isColor=is_color)
     for frame in frames:
@@ -89,6 +89,31 @@ def scale_matrix_0_to_255(input_matrix):
     scaled = 255 * (input_matrix - np.min(input_matrix)) / np.ptp(input_matrix)
     return np.uint8(scaled)
 
+
+def load_entire_video(cap, color_space='bgr'):
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    frames = []
+    for i in range(n_frames):
+        print("Frame: " + str(i) + "/" + str(n_frames))
+        # Read next frame
+        success, curr = cap.read()
+        if not success:
+            break
+        if color_space == 'bgr':
+            frames.append(curr)
+        else:
+            frames.append(cv2.cvtColor(curr, cv2.COLOR_BGR2HSV))
+        continue
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    return np.asarray(frames)
+
+def apply_mask_on_color_frame(frame,mask):
+    frame_after_mask = np.copy(frame)
+    frame_after_mask[:, :, 0] = frame_after_mask[:, :, 0] * mask
+    frame_after_mask[:, :, 1] = frame_after_mask[:, :, 1] * mask
+    frame_after_mask[:, :, 2] = frame_after_mask[:, :, 2] * mask
+    return frame_after_mask
 # font = cv2.FONT_HERSHEY_SIMPLEX
 # bottomLeftCornerOfText = (10, 50)
 # fontScale = 3
@@ -103,4 +128,12 @@ def scale_matrix_0_to_255(input_matrix):
 #             lineType)
 #
 # cv2.imshow('s',weighted_mask)
+# cv2.waitKey(0)
+
+# # Write the frame to the file
+# concat_frame = cv2.hconcat([mask_or, mask_or_erosion])
+# # If the image is too big, resize it.
+# if concat_frame.shape[1] > 1920:
+#     concat_frame = cv2.resize(concat_frame, (int(concat_frame.shape[1]), int(concat_frame.shape[0])))
+# cv2.imshow("Before and After", concat_frame)
 # cv2.waitKey(0)

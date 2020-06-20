@@ -1,82 +1,37 @@
-import numpy as np
 import cv2
-from matplotlib import pyplot as plt
+import numpy as np
+
 from utils import (
     get_video_files,
     release_video_files,
-    smooth,
-    plot_img_with_points,
     write_video,
-    scale_matrix_0_to_255
+    load_entire_video,
+    scale_matrix_0_to_255,
+    apply_mask_on_color_frame
 )
 
 
 def background_substraction(input_video_path, output_video_path):
     # Read input video
-    # cap = cv2.VideoCapture(input_video_path)
     cap, out, w, h, fps = get_video_files(input_video_path, output_video_path, isColor=True)
     # Get frame count
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     # Read first frame
     _, prev = cap.read()
-    # Convert frame to grayscale
-    prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
-    # Pre-define transformation-store array
 
-    frames_bgr = [prev]  # MEDIAN TRY
-    frames_hsv = [cv2.cvtColor(prev, cv2.COLOR_BGR2HSV)]
-    for i in range(n_frames):
-        print("Frame: " + str(i) + "/" + str(n_frames))
-        # Detect feature points in previous frame
-        # if i == 40:
-        #     cv2.imwrite("frame40.png", curr)
-        #     print('hi')
+    frames_bgr = load_entire_video(cap, color_space='bgr')
+    frames_hsv = load_entire_video(cap, color_space='hsv')
 
-        # Read next frame
-        success, curr = cap.read()
-        if not success:
-            break
-        frames_bgr.append(curr)
-        frames_hsv.append(cv2.cvtColor(curr, cv2.COLOR_BGR2HSV))
-
-        # Convert to grayscale
-        # curr_gray = cv2.cvtColor(curr, cv2.COLOR_BGR2GRAY)
-
-        # for every frame,
-        # get current_frame_gray
-
-        # prev_gray = curr_gray
-        continue
-
-    frames_bgr = np.asarray(frames_bgr)
-    frames_hsv = np.asarray(frames_hsv)
+    "Find medians in colors space "
     medians_frame_bgr = np.median(frames_bgr, axis=0)
     medians_frame_b, medians_frame_g, medians_frame_r = cv2.split(medians_frame_bgr)
     medians_frame_hsv = np.median(frames_hsv, axis=0)
     medians_frame_h, medians_frame_s, medians_frame_v = cv2.split(medians_frame_hsv)
 
-    out_size = (w, h)
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Define video codec
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    # h_out = cv2.VideoWriter('h_results.avi', fourcc, fps, out_size, isColor=False)
-    s_out = cv2.VideoWriter('s_results.avi', fourcc, fps, out_size, isColor=False)
-    v_out = cv2.VideoWriter('v_results.avi', fourcc, fps, out_size, isColor=False)
-    b_out = cv2.VideoWriter('b_results.avi', fourcc, fps, out_size, isColor=False)
-    blue_mask_out = cv2.VideoWriter('blue_mask_out.avi', fourcc, fps, out_size, isColor=False)
-
-    # g_out = cv2.VideoWriter('g_results.avi', fourcc, fps, out_size, isColor=False)
-    # r_out = cv2.VideoWriter('r_results.avi', fourcc, fps, out_size, isColor=False)
-    # mask_s_out = cv2.VideoWriter('mask_s.avi', fourcc, fps, out_size, isColor=False)
-    # mask_v_out = cv2.VideoWriter('mask_v.avi', fourcc, fps, out_size, isColor=False)
-    mask_weighted_out = cv2.VideoWriter('mask_weighted.avi', fourcc, fps, out_size, isColor=False)
-    mask_or_out = cv2.VideoWriter('mask_or.avi', fourcc, fps, out_size, isColor=False)
-    original_with_or_mask_out = cv2.VideoWriter('original_with_or_mask.avi', fourcc, fps, out_size, isColor=True)
-
-    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-
-    frames_after_or_filter = []
-
+    s_diff_from_median_list, v_diff_from_median_list, b_diff_from_median_list = [], [], []
+    mask_s_list, mask_v_list, blue_mask_list, mask_or_list, mask_weighted_list = [], [], [],[], []
+    original_with_or_mask_results = []
     for i in range(n_frames):
         success, curr = cap.read()
         if not success:
@@ -84,85 +39,46 @@ def background_substraction(input_video_path, output_video_path):
         curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
         curr_h, curr_s, curr_v = cv2.split(curr_hsv)
         curr_b, curr_g, curr_r = cv2.split(curr)
-        # diff_h = np.abs(medians_frame_h-curr_h).astype(np.uint8)
         diff_s = np.abs(medians_frame_s - curr_s).astype(np.uint8)
+        s_diff_from_median_list.append(diff_s)
         diff_v = np.abs(medians_frame_v - curr_v).astype(np.uint8)
+        v_diff_from_median_list.append(diff_v)
         diff_b = np.abs(medians_frame_b - curr_b).astype(np.uint8)
-        # diff_g = np.abs(medians_frame_g-curr_g).astype(np.uint8)
-        # diff_r = np.abs(medians_frame_r-curr_r).astype(np.uint8)
+        b_diff_from_median_list.append(diff_b)
+        blue_mask = (diff_b > np.mean(diff_b) * 1.5)
         mask_s = (diff_s > np.mean(diff_s) * 5)
         mask_v = (diff_v > np.mean(diff_v) * 5)
         mask_or = (mask_s | mask_v).astype(np.uint8)
-        mask_s = mask_s.astype(np.uint8) * 255
-        mask_v = mask_v.astype(np.uint8) * 255
-        weighted_mask = (0.5 * (diff_s - np.mean(diff_s) * 5) + 0.5 * (diff_v - np.mean(diff_v) * 7) > 0).astype(
-            np.uint8) * 255
+
+        weighted_mask = scale_matrix_0_to_255(
+            (0.5 * (diff_s - np.mean(diff_s) * 5) + 0.5 * (diff_v - np.mean(diff_v) * 7) > 0).astype(np.uint8))
 
         kernel = np.ones((7, 7), np.uint8)
         dilation = cv2.dilate(mask_or, kernel, iterations=1)
-        blue_mask = (diff_b > np.mean(diff_b) * 1.5).astype(np.uint8) * 255
 
-        frame_after_or_flt = np.copy(curr)
-        frame_after_or_flt[:, :, 0] = frame_after_or_flt[:, :, 0] * dilation
-        frame_after_or_flt[:, :, 1] = frame_after_or_flt[:, :, 1] * dilation
-        frame_after_or_flt[:, :, 2] = frame_after_or_flt[:, :, 2] * dilation
-        original_with_or_mask_out.write(frame_after_or_flt)
-        dilation *= 255
+        frame_after_or_flt = apply_mask_on_color_frame(curr,dilation)
+        original_with_or_mask_results.append(frame_after_or_flt)
 
-        '''EROISON'''
-        # kernel = np.ones((10, 5), np.uint8)
-        # mask_or_erosion = cv2.erode(mask_or, kernel, iterations=1)
-        # # Write the frame to the file
-        # concat_frame = cv2.hconcat([mask_or, mask_or_erosion])
-        # # If the image is too big, resize it.
-        # if concat_frame.shape[1] > 1920:
-        #     concat_frame = cv2.resize(concat_frame, (int(concat_frame.shape[1]), int(concat_frame.shape[0])))
-        # cv2.imshow("Before and After", concat_frame)
-        # cv2.waitKey(0)
-        '''EROISON - END'''
+        mask_s = scale_matrix_0_to_255(mask_s)
+        mask_s_list.append(mask_s)
+        mask_v = scale_matrix_0_to_255(mask_v)
+        mask_v_list.append(mask_v)
+        blue_mask = scale_matrix_0_to_255(blue_mask)
+        blue_mask_list.append(blue_mask)
+        dilation = scale_matrix_0_to_255(dilation)
+        mask_or_list.append(dilation)
+        mask_weighted_list.append(weighted_mask)
 
-        # h_out.write(diff_h)
-        s_out.write(diff_s)
-        v_out.write(diff_v)
-        b_out.write(diff_b)
-        blue_mask_out.write(blue_mask)
-        # g_out.write(diff_g)
-        # r_out.write(diff_r)
-        # mask_s_out.write(mask_s)
-        # mask_v_out.write(mask_v)
-        mask_weighted_out.write(weighted_mask)
-
-        mask_or_out.write(dilation)
-        # print(f'mean of s: {np.mean(diff_s)}')
-
-    # h_out.release()
-    s_out.release()
-    v_out.release()
-    b_out.release()
-    # g_out.release()
-    # r_out.release()
-    # mask_s_out.release()
-    # mask_v_out.release()
-    mask_weighted_out.release()
-    mask_or_out.release()
-    original_with_or_mask_out.release()
-    blue_mask_out.release()
-
-    '''OPTICAL FLOW TRY'''
-    # out_size = (w, h)
-    # fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Define video codec
-    # fps = cap.get(cv2.CAP_PROP_FPS)
-    # v_out = cv2.VideoWriter('v_results.avi', fourcc, fps, out_size, isColor=False)
-    # u_out = cv2.VideoWriter('u_results.avi', fourcc, fps, out_size, isColor=False)
-    #
-    # for u_frame in u_results:
-    #     u_out.write(u_frame)
-    # u_out.release()
-    # for v_frame in v_results:
-    #     v_out.write(v_frame)
-    # v_out.release()
-    '''OPTICAL FLOW TRY - end'''
-
+    write_video('s_diff_from_median_results.avi', frames=s_diff_from_median_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('v_diff_from_median_results.avi', frames=v_diff_from_median_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('b_diff_from_median_results.avi', frames=b_diff_from_median_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('blue_mask_out.avi', frames=blue_mask_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('mask_weighted.avi', frames=blue_mask_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('mask_or.avi', frames=blue_mask_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('mask_s.avi', frames=mask_s_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('mask_v.avi', frames=mask_v_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('original_with_or_mask.avi', frames=original_with_or_mask_results, fps=fps, out_size=(w, h),
+                is_color=False)
     release_video_files(cap, out)
 
 
