@@ -98,7 +98,7 @@ def load_entire_video(cap, color_space='bgr'):
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frames = []
     for i in range(n_frames):
-        print("Frame: " + str(i) + "/" + str(n_frames))
+        # print("Frame: " + str(i) + "/" + str(n_frames))
         # Read next frame
         success, curr = cap.read()
         if not success:
@@ -111,12 +111,25 @@ def load_entire_video(cap, color_space='bgr'):
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     return np.asarray(frames)
 
-def apply_mask_on_color_frame(frame,mask):
+
+def apply_mask_on_color_frame(frame, mask):
     frame_after_mask = np.copy(frame)
     frame_after_mask[:, :, 0] = frame_after_mask[:, :, 0] * mask
     frame_after_mask[:, :, 1] = frame_after_mask[:, :, 1] * mask
     frame_after_mask[:, :, 2] = frame_after_mask[:, :, 2] * mask
     return frame_after_mask
+
+
+def choose_indices_for_foreground(mask, number_of_choices):
+    indices = np.where(mask == 1)
+    indices_choices = np.random.choice(len(indices[0]), number_of_choices)
+    return np.column_stack((indices[0][indices_choices], indices[1][indices_choices]))
+
+def choose_indices_for_background(mask, number_of_choices):
+    indices = np.where(mask == 0)
+    indices_choices = np.random.choice(len(indices[0]), number_of_choices)
+    return np.column_stack((indices[0][indices_choices], indices[1][indices_choices]))
+
 # font = cv2.FONT_HERSHEY_SIMPLEX
 # bottomLeftCornerOfText = (10, 50)
 # fontScale = 3
@@ -139,4 +152,11 @@ def apply_mask_on_color_frame(frame,mask):
 # if concat_frame.shape[1] > 1920:
 #     concat_frame = cv2.resize(concat_frame, (int(concat_frame.shape[1]), int(concat_frame.shape[0])))
 # cv2.imshow("Before and After", concat_frame)
+# cv2.waitKey(0)
+
+# image = np.copy(frame_after_or_and_blue_flt)
+# for index in range(chosen_pixels_indices.shape[0]):
+#     image = cv2.circle(image, (chosen_pixels_indices[index][1], chosen_pixels_indices[index][0]), 5, (0, 255, 0), 2)
+# Displaying the image
+# cv2.imshow('sas', image)
 # cv2.waitKey(0)
