@@ -7,6 +7,8 @@ from utils import (
     write_video,
     scale_matrix_0_to_255)
 
+from Faster_Kmeans_master.Code.kmeans import Kmeans
+
 
 def background_substraction(input_video_path, output_video_path):
     # Read input video
@@ -49,6 +51,12 @@ def background_substraction(input_video_path, output_video_path):
         u_results.append(scaled_u)
         scaled_v = scale_matrix_0_to_255(flow[:, :, 1])
         v_results.append(scaled_v)
+
+        '''K-means try'''
+        pointList = flow.reshape((h * w, 2))
+        pointList2 = pointList[::100, :]
+        kmeans_result = Kmeans(2, pointList2, 100)
+        '''K-means try - END'''
 
         prev_gray = curr_gray
         continue
