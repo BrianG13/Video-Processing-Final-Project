@@ -15,6 +15,7 @@ from kernel_estimation import (
     estimate_pdf
 )
 
+import time
 
 def background_substraction(input_video_path, output_video_path):
     # Read input video
@@ -123,6 +124,7 @@ def background_substraction(input_video_path, output_video_path):
         # print(f'shoe: {background_pdf(np.asarray([90,90,90]).T)}')
 
         row_stacked_original_frame = curr.reshape((h*w),3)
+        now = time.time()
         foreground_probabilities = np.fromiter(map(lambda elem: check_in_dict(foreground_memory,elem,foreground_pdf),
                                          map(tuple, row_stacked_original_frame)),dtype=float)
         foreground_probabilities = foreground_probabilities.reshape((h,w))
@@ -131,6 +133,7 @@ def background_substraction(input_video_path, output_video_path):
         background_probabilities = background_probabilities.reshape((h,w))
         print(f'background mem size: {len(background_memory)}')
         print(f'foreground mem size: {len(foreground_memory)}')
+        print(f'time for probs : {time.time()-now}')
 
         probs_mask = foreground_probabilities > background_probabilities
         probs_mask = probs_mask.astype(np.uint8) * 255
