@@ -22,7 +22,7 @@ def get_video_files(path, output_name, isColor):
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     out_size = (width, height)
     out = cv2.VideoWriter(output_name, fourcc, fps, out_size, isColor=isColor)
-    return cap, out
+    return cap, out, width, height, fps
 
 
 def release_video_files(cap, out):
@@ -75,6 +75,19 @@ def smooth(trajectory, smooth_radius):
         smoothed_trajectory[:, i] = movingAverage(trajectory[:, i], radius=smooth_radius)
 
     return smoothed_trajectory
+
+
+def write_video(output_path,frames,fps,out_size,is_color):
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Define video codec
+    video_out = cv2.VideoWriter(output_path, fourcc, fps, out_size, isColor=is_color)
+    for frame in frames:
+        video_out.write(frame)
+    video_out.release()
+
+
+def scale_matrix_0_to_255(input_matrix):
+    scaled = 255 * (input_matrix - np.min(input_matrix)) / np.ptp(input_matrix)
+    return np.uint8(scaled)
 
 # font = cv2.FONT_HERSHEY_SIMPLEX
 # bottomLeftCornerOfText = (10, 50)
