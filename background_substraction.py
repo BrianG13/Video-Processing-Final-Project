@@ -10,7 +10,8 @@ from utils import (
     apply_mask_on_color_frame,
     choose_indices_for_foreground,
     choose_indices_for_background,
-    check_in_dict
+    check_in_dict,
+    SHOES_HEIGHT
 )
 from kernel_estimation import (
     estimate_pdf
@@ -65,8 +66,8 @@ def background_substraction(input_video_path, output_video_path):
         if not success:
             break
 
-        if i != 52:
-            continue
+        # if not(i%20 == 0):
+        #     continue
         '''COMMENTING THIS, LOADING FRAME 92, SO ALL THIS CALCULCATIONS OVER TIME ARE NOT NECESSARY'''
         # curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
         # curr_h, curr_s, curr_v = cv2.split(curr_hsv)
@@ -145,6 +146,11 @@ def background_substraction(input_video_path, output_video_path):
                                              foreground_pdf=foreground_pdf,
                                              foreground_memory=foreground_memory,
                                              medians_frame_g=medians_frame_g)
+
+        mask_fine_tuned_with_shoes = np.copy(mask_fine_tuned_after_contours)
+        mask_fine_tuned_with_shoes[SHOES_HEIGHT:,:] = mask_after_shoes_fix[SHOES_HEIGHT:,:]
+        cv2.imwrite(f'fine_tune_contours_and_shoes_{i}.png',apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
+
     # write_video('original_with_or_mask_and_blue.avi', frames=original_with_or_mask_and_blue_results, fps=fps, out_size=(w, h),
     #             is_color=True)
     write_video('probs_mask_after_erosion_before_closing.avi', frames=probs_mask_eroison_list, fps=fps, out_size=(w, h),
