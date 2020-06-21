@@ -51,12 +51,13 @@ def background_substraction(input_video_path, output_video_path):
     probs_mask_after_closing_list = []
     probs_mask_eroison_list = []
     contour_color_list = []
-    mask = frame_92(frames_bgr[92])
-    omega_f_indices = choose_indices_for_foreground(mask, 200)
-    omega_b_indices = choose_indices_for_background(mask, 200)
+    mask_for_building_kde = frame_92(frames_bgr[92])
 
-    foreground_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_f_indices)
-    background_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_b_indices)
+    omega_f_indices = choose_indices_for_foreground(mask_for_building_kde, 200)
+    omega_b_indices = choose_indices_for_background(mask_for_building_kde, 200)
+
+    foreground_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_f_indices,bw_method=2)
+    background_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_b_indices,bw_method=2)
     foreground_memory = dict()
     background_memory = dict()
     for i in range(n_frames):
@@ -66,8 +67,8 @@ def background_substraction(input_video_path, output_video_path):
         if not success:
             break
 
-        # if not(i%20 == 0):
-        #     continue
+        if not(i%20 == 0):
+            continue
         '''COMMENTING THIS, LOADING FRAME 92, SO ALL THIS CALCULCATIONS OVER TIME ARE NOT NECESSARY'''
         # curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
         # curr_h, curr_s, curr_v = cv2.split(curr_hsv)
@@ -145,7 +146,8 @@ def background_substraction(input_video_path, output_video_path):
                                              background_memory=background_memory,
                                              foreground_pdf=foreground_pdf,
                                              foreground_memory=foreground_memory,
-                                             medians_frame_g=medians_frame_g)
+                                             medians_frame_g=medians_frame_g,
+                                             mask_to_classify_shoes_from_ground=mask_for_building_kde)
 
         mask_fine_tuned_with_shoes = np.copy(mask_fine_tuned_after_contours)
         mask_fine_tuned_with_shoes[SHOES_HEIGHT:,:] = mask_after_shoes_fix[SHOES_HEIGHT:,:]

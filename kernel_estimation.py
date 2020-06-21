@@ -6,9 +6,9 @@ from scipy.stats.distributions import norm
 NUM_OF_PLOTS = 5
 
 
-def estimate_pdf(original_frame, indices):
+def estimate_pdf(original_frame, indices,bw_method):
     omega_f_values = original_frame[indices[:, 0], indices[:, 1], :]
-    pdf = gaussian_kde(omega_f_values.T,bw_method=2)
+    pdf = gaussian_kde(omega_f_values.T,bw_method=bw_method)
     return lambda x: pdf(x.T)
 
 

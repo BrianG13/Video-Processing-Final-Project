@@ -1,4 +1,4 @@
-SHOES_HEIGHT = 855
+SHOES_HEIGHT = 790  # 825
 
 
 import numpy as np
