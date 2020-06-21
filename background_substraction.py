@@ -9,11 +9,14 @@ from utils import (
     scale_matrix_0_to_255,
     apply_mask_on_color_frame,
     choose_indices_for_foreground,
-    choose_indices_for_background
+    choose_indices_for_background,
+    check_in_dict
 )
 from kernel_estimation import (
     estimate_pdf
 )
+
+from fine_tune_background_substraction import fine_tune_contour_mask
 
 def background_substraction(input_video_path, output_video_path):
     # Read input video
@@ -55,10 +58,14 @@ def background_substraction(input_video_path, output_video_path):
     foreground_memory = dict()
     background_memory = dict()
     for i in range(n_frames):
+
         print("Frame: " + str(i) + "/" + str(n_frames))
         success, curr = cap.read()
         if not success:
             break
+
+        if i != 52:
+            continue
         '''COMMENTING THIS, LOADING FRAME 92, SO ALL THIS CALCULCATIONS OVER TIME ARE NOT NECESSARY'''
         # curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
         # curr_h, curr_s, curr_v = cv2.split(curr_hsv)
@@ -101,27 +108,35 @@ def background_substraction(input_video_path, output_video_path):
         probs_mask = foreground_probabilities > background_probabilities
         probs_mask = probs_mask.astype(np.uint8) * 255
 
-        probs_mask_eroison = cv2.erode(probs_mask, np.ones((3, 1), np.uint8), iterations=1)
+        probs_mask_eroison = cv2.erode(probs_mask, np.ones((3, 1), np.uint8), iterations=2)
         probs_mask_eroison = cv2.erode(probs_mask_eroison, np.ones((1, 3), np.uint8), iterations=1)
 
         cv2.imwrite(f'probs_mask_eroison_frame_{i}.png', probs_mask_eroison)
         probs_mask_eroison_list.append(probs_mask_eroison)
 
-        # probs_mask_eroison = cv2.erode(probs_mask_eroison, np.ones((3, 1), np.uint8), iterations=1)
-        # probs_mask_eroison = cv2.erode(probs_mask_eroison, np.ones((1, 4), np.uint8), iterations=1)
         closing = cv2.morphologyEx(probs_mask_eroison, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
         probs_mask_after_closing_list.append(closing)
         cv2.imwrite(f'probs_mask_frame_closing_{i}.png', closing)
 
         img, contours, hierarchy = cv2.findContours(closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contours = sorted(contours, key=cv2.contourArea, reverse=True)
-        cv2.drawContours(curr, contours, 0, (0, 255, 0), 3)
-        cv2.imwrite(f'countours_probs_{i}.png', curr)
+        # cv2.drawContours(curr, contours, 0, (0, 255, 0), 3)
+        cv2.imwrite(f'contours_probs_{i}.png', curr)
         contour_mask = np.zeros((h, w))  # create a single channel 200x200 pixel black image
         cv2.fillPoly(contour_mask, pts=[contours[0]], color=1)
-        cv2.imwrite(f'filled_countour_img_{i}.png', scale_matrix_0_to_255(contour_mask))
+        cv2.imwrite(f'filled_contour_img_{i}.png', scale_matrix_0_to_255(contour_mask))
         contour_color_image = apply_mask_on_color_frame(curr, contour_mask)
         contour_color_list.append(contour_color_image)
+        cv2.imwrite(f'contours_color_img_{i}.png', contour_color_image)
+
+        mask_fine_tuned_after_contours = fine_tune_contour_mask(frame_index=i,
+                                                                 contour_mask=contour_mask,
+                                                                 original_frame=curr,
+                                                                 background_pdf=background_pdf,
+                                                                 background_memory=background_memory,
+                                                                 foreground_pdf=foreground_pdf,
+                                                                 foreground_memory=foreground_memory)
+
 
     # write_video('original_with_or_mask_and_blue.avi', frames=original_with_or_mask_and_blue_results, fps=fps, out_size=(w, h),
     #             is_color=True)
@@ -158,9 +173,4 @@ def frame_92(curr):
     return final_mask
 
 
-def check_in_dict(dict, element, function):
-    if element in dict:
-        return dict[element]
-    else:
-        dict[element] = function(np.asarray(element))[0]
-        return dict[element]
+

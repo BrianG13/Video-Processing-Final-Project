@@ -125,10 +125,19 @@ def choose_indices_for_foreground(mask, number_of_choices):
     indices_choices = np.random.choice(len(indices[0]), number_of_choices)
     return np.column_stack((indices[0][indices_choices], indices[1][indices_choices]))
 
+
 def choose_indices_for_background(mask, number_of_choices):
     indices = np.where(mask == 0)
     indices_choices = np.random.choice(len(indices[0]), number_of_choices)
     return np.column_stack((indices[0][indices_choices], indices[1][indices_choices]))
+
+
+def check_in_dict(dict, element, function):
+    if element in dict:
+        return dict[element]
+    else:
+        dict[element] = function(np.asarray(element))[0]
+        return dict[element]
 
 # font = cv2.FONT_HERSHEY_SIMPLEX
 # bottomLeftCornerOfText = (10, 50)
