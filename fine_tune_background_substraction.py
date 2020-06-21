@@ -34,6 +34,6 @@ def fine_tune_contour_mask(frame_index, original_frame, contour_mask,
 
     return dilated_contour_mask_frame_tuned
 
-# 
-# def restore_shoes(contour_mask):
-#
+
+def restore_shoes(contour_mask):
+

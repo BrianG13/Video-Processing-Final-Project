@@ -18,6 +18,7 @@ from kernel_estimation import (
 
 from fine_tune_background_substraction import fine_tune_contour_mask
 
+
 def background_substraction(input_video_path, output_video_path):
     # Read input video
     cap, out, w, h, fps = get_video_files(input_video_path, output_video_path, isColor=True)
@@ -121,7 +122,7 @@ def background_substraction(input_video_path, output_video_path):
         img, contours, hierarchy = cv2.findContours(closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contours = sorted(contours, key=cv2.contourArea, reverse=True)
         # cv2.drawContours(curr, contours, 0, (0, 255, 0), 3)
-        cv2.imwrite(f'contours_probs_{i}.png', curr)
+        # cv2.imwrite(f'contours_probs_{i}.png', curr)
         contour_mask = np.zeros((h, w))  # create a single channel 200x200 pixel black image
         cv2.fillPoly(contour_mask, pts=[contours[0]], color=1)
         cv2.imwrite(f'filled_contour_img_{i}.png', scale_matrix_0_to_255(contour_mask))
@@ -130,18 +131,19 @@ def background_substraction(input_video_path, output_video_path):
         cv2.imwrite(f'contours_color_img_{i}.png', contour_color_image)
 
         mask_fine_tuned_after_contours = fine_tune_contour_mask(frame_index=i,
-                                                                 contour_mask=contour_mask,
-                                                                 original_frame=curr,
-                                                                 background_pdf=background_pdf,
-                                                                 background_memory=background_memory,
-                                                                 foreground_pdf=foreground_pdf,
-                                                                 foreground_memory=foreground_memory)
-
+                                                                contour_mask=contour_mask,
+                                                                original_frame=curr,
+                                                                background_pdf=background_pdf,
+                                                                background_memory=background_memory,
+                                                                foreground_pdf=foreground_pdf,
+                                                                foreground_memory=foreground_memory)
 
     # write_video('original_with_or_mask_and_blue.avi', frames=original_with_or_mask_and_blue_results, fps=fps, out_size=(w, h),
     #             is_color=True)
-    write_video('probs_mask_after_erosion_before_closing.avi', frames=probs_mask_eroison_list, fps=fps, out_size=(w, h), is_color=False)
-    write_video('probs_mask_after_closing.avi', frames=probs_mask_after_closing_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('probs_mask_after_erosion_before_closing.avi', frames=probs_mask_eroison_list, fps=fps, out_size=(w, h),
+                is_color=False)
+    write_video('probs_mask_after_closing.avi', frames=probs_mask_after_closing_list, fps=fps, out_size=(w, h),
+                is_color=False)
     write_video('original_only_contour.avi', frames=contour_color_list, fps=fps, out_size=(w, h), is_color=True)
 
     release_video_files(cap, out)
@@ -171,6 +173,3 @@ def frame_92(curr):
 
     cv2.imwrite('frame92_msk.png', scale_matrix_0_to_255(final_mask))
     return final_mask
-
-
-
