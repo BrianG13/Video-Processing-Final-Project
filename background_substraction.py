@@ -16,7 +16,7 @@ from kernel_estimation import (
     estimate_pdf
 )
 
-from fine_tune_background_substraction import fine_tune_contour_mask
+from fine_tune_background_substraction import fine_tune_contour_mask, restore_shoes
 
 
 def background_substraction(input_video_path, output_video_path):
@@ -137,7 +137,14 @@ def background_substraction(input_video_path, output_video_path):
                                                                 background_memory=background_memory,
                                                                 foreground_pdf=foreground_pdf,
                                                                 foreground_memory=foreground_memory)
-
+        mask_after_shoes_fix = restore_shoes(frame_index=i,
+                                             contour_mask=mask_fine_tuned_after_contours,
+                                             original_frame=curr,
+                                             background_pdf=background_pdf,
+                                             background_memory=background_memory,
+                                             foreground_pdf=foreground_pdf,
+                                             foreground_memory=foreground_memory,
+                                             medians_frame_g=medians_frame_g)
     # write_video('original_with_or_mask_and_blue.avi', frames=original_with_or_mask_and_blue_results, fps=fps, out_size=(w, h),
     #             is_color=True)
     write_video('probs_mask_after_erosion_before_closing.avi', frames=probs_mask_eroison_list, fps=fps, out_size=(w, h),
