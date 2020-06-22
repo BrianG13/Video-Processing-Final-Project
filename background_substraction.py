@@ -11,13 +11,19 @@ from utils import (
     choose_indices_for_foreground,
     choose_indices_for_background,
     check_in_dict,
-    SHOES_HEIGHT
+    SHOES_HEIGHT,
+    FRAME_INDEX_FOR_FACE_TUNING
 )
 from kernel_estimation import (
     estimate_pdf
 )
 
-from fine_tune_background_substraction import fine_tune_contour_mask, restore_shoes
+from fine_tune_background_substraction import (
+    fine_tune_contour_mask,
+    restore_shoes,
+    build_shoulders_face_pdf,
+    remove_signs
+)
 
 
 def background_substraction(input_video_path, output_video_path):
@@ -51,27 +57,24 @@ def background_substraction(input_video_path, output_video_path):
     probs_mask_after_closing_list = []
     probs_mask_eroison_list = []
     contour_color_list = []
-    fine_tuned_with_shoes_color_list = []
+    removed_signs_color_frame_list, removed_signs_mask_list = [], []
+    fine_tuned_with_shoes_color_list, fine_tuned_with_shoes_mask_list = [], []
+    '''Build KDE from specified frame filtered by s,v channels'''
     mask_for_building_kde = frame_92(frames_bgr[92])
-
-
-
     omega_f_indices = choose_indices_for_foreground(mask_for_building_kde, 200)
     omega_b_indices = choose_indices_for_background(mask_for_building_kde, 200)
-
-    foreground_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_f_indices,bw_method=2)
-    background_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_b_indices,bw_method=2)
+    foreground_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_f_indices, bw_method=2)
+    background_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_b_indices, bw_method=2)
     foreground_memory = dict()
     background_memory = dict()
-    for i in range(n_frames):
 
+    ''''''
+
+    for i in range(n_frames):
         print("Frame: " + str(i) + "/" + str(n_frames))
         success, curr = cap.read()
         if not success:
             break
-
-        if i != 137:
-            continue
 
         '''COMMENTING THIS, LOADING FRAME 92, SO ALL THIS CALCULCATIONS OVER TIME ARE NOT NECESSARY'''
         # curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
@@ -122,6 +125,7 @@ def background_substraction(input_video_path, output_video_path):
         probs_mask_eroison_list.append(probs_mask_eroison)
 
         closing = cv2.morphologyEx(probs_mask_eroison, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+        closing = cv2.morphologyEx(probs_mask_eroison, cv2.MORPH_CLOSE, np.ones((10, 1), np.uint8))
         probs_mask_after_closing_list.append(closing)
         cv2.imwrite(f'probs_mask_frame_closing_{i}.png', closing)
 
@@ -154,23 +158,50 @@ def background_substraction(input_video_path, output_video_path):
                                              mask_to_classify_shoes_from_ground=mask_for_building_kde)
 
         mask_fine_tuned_with_shoes = np.copy(mask_fine_tuned_after_contours)
-        mask_fine_tuned_with_shoes[SHOES_HEIGHT:,:] = mask_after_shoes_fix[SHOES_HEIGHT:,:]
+        mask_fine_tuned_with_shoes[SHOES_HEIGHT:, :] = mask_after_shoes_fix[SHOES_HEIGHT:, :]
         mask_fine_tuned_with_shoes = cv2.erode(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
         mask_fine_tuned_with_shoes = cv2.dilate(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
         fine_tuned_with_shoes_color = apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes)
         fine_tuned_with_shoes_color_list.append(fine_tuned_with_shoes_color)
-        cv2.imwrite(f'fine_tune_contours_and_shoes_{i}.png',apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
+        fine_tuned_with_shoes_mask_list.append(mask_fine_tuned_with_shoes)
+        cv2.imwrite(f'fine_tune_contours_and_shoes_{i}.png',
+                    apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
+        cv2.imwrite(f'fine_tune_contours_and_shoes_mask_{i}.png',
+                    scale_matrix_0_to_255(mask_fine_tuned_with_shoes))
 
 
+    fine_tuned_with_shoes_mask_list = load_masks_from_middle()  # TODO- DELETE THIS HACK!
+    shoulders_face_narrow_pdf = build_shoulders_face_pdf(fine_tuned_with_shoes_mask_list[FRAME_INDEX_FOR_FACE_TUNING],
+                                                         frames_bgr[FRAME_INDEX_FOR_FACE_TUNING],
+                                                         bw_method=0.3)
+    shoulders_face_wide_pdf = build_shoulders_face_pdf(fine_tuned_with_shoes_mask_list[FRAME_INDEX_FOR_FACE_TUNING],
+                                                       frames_bgr[FRAME_INDEX_FOR_FACE_TUNING],
+                                                       bw_method=1)
+    shoulders_and_face_pdf_narrow_memory = dict()
+    shoulders_and_face_pdf_wide_memory = dict()
+    for frame_index in range(n_frames):
+        print(frame_index)
+        remove_signs_mask = remove_signs(frame_index=frame_index,
+                                         original_frame=frames_bgr[frame_index],
+                                         mask=fine_tuned_with_shoes_mask_list[frame_index],
+                                         shoulders_and_face_narrow_pdf=shoulders_face_narrow_pdf,
+                                         shoulders_and_face_wide_pdf=shoulders_face_wide_pdf,
+                                         shoulders_and_face_pdf_narrow_memory=shoulders_and_face_pdf_narrow_memory,
+                                         shoulders_and_face_pdf_wide_memory=shoulders_and_face_pdf_wide_memory
+                                         )
+        removed_signs_color_frame = apply_mask_on_color_frame(frames_bgr[frame_index], remove_signs_mask)
+        removed_signs_color_frame_list.append(removed_signs_color_frame)
+        removed_signs_mask_list.append(scale_matrix_0_to_255(remove_signs_mask))
 
-    write_video('background_substraction.avi', frames=fine_tuned_with_shoes_color_list, fps=fps, out_size=(w, h),
+    write_video('background_substraction_mask.avi', frames=removed_signs_mask_list, fps=fps, out_size=(w, h),
+                is_color=False)
+    write_video('background_substraction.avi', frames=removed_signs_color_frame_list, fps=fps, out_size=(w, h),
                 is_color=True)
     write_video('probs_mask_after_erosion_before_closing.avi', frames=probs_mask_eroison_list, fps=fps, out_size=(w, h),
                 is_color=False)
     write_video('probs_mask_after_closing.avi', frames=probs_mask_after_closing_list, fps=fps, out_size=(w, h),
                 is_color=False)
     write_video('original_only_contour.avi', frames=contour_color_list, fps=fps, out_size=(w, h), is_color=True)
-
     release_video_files(cap, out)
 
 
@@ -198,3 +229,12 @@ def frame_92(curr):
 
     cv2.imwrite('frame92_msk.png', scale_matrix_0_to_255(final_mask))
     return final_mask
+
+
+def load_masks_from_middle():
+    frames = []
+    for i in range(205):
+        frame = cv2.imread(f'fine_tune_contours_and_shoes_mask_{i}.png', cv2.IMREAD_GRAYSCALE)
+        frame = frame / 255
+        frames.append(frame)
+    return frames
