@@ -1,7 +1,7 @@
 SHOES_HEIGHT = 790
 SHOULDERS_HEIGHT = 405
 OVERHEAD_HEIGHT = 160
-
+FRAME_INDEX_FOR_FACE_TUNING = 145
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
