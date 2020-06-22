@@ -89,7 +89,6 @@ def restore_shoes(frame_index, original_frame, contour_mask,
     around_shoes_foreground_probabilities = foreground_around_shoes_pdf(small_original_frame_stacked)
     around_shoes_background_probabilities = background_around_shoes_pdf(small_original_frame_stacked)
 
-
     around_shoes_classifier_mask = around_shoes_foreground_probabilities > around_shoes_background_probabilities
     around_shoes_classifier_mask = around_shoes_classifier_mask.reshape((-1, right_shoe_index - left_shoe_index + 1))
     fat_shoes_mask[SHOES_HEIGHT:, left_shoe_index:right_shoe_index + 1] = around_shoes_classifier_mask
@@ -115,7 +114,7 @@ def build_shoulders_face_pdf(mask, image, bw_method):
 
 
 def remove_signs(frame_index, original_frame, mask, shoulders_and_face_narrow_pdf, shoulders_and_face_wide_pdf,
-                 shoulders_and_face_pdf_narrow_memory,shoulders_and_face_pdf_wide_memory):
+                 shoulders_and_face_pdf_narrow_memory, shoulders_and_face_pdf_wide_memory):
     person_mask = np.copy(mask)
     face_indices_rectangle_x_axis = np.where(person_mask == 1)[1]
     left_index, right_index = np.min(face_indices_rectangle_x_axis), np.max(face_indices_rectangle_x_axis)
@@ -126,9 +125,12 @@ def remove_signs(frame_index, original_frame, mask, shoulders_and_face_narrow_pd
     shoulders_face_narrow_probabilities = np.fromiter(
         map(lambda elem: check_in_dict(shoulders_and_face_pdf_narrow_memory, elem, shoulders_and_face_narrow_pdf),
             map(tuple, small_image_row_stacked)), dtype=float)
-    small_mask_only_narrow_foreground_row_stacked = (shoulders_face_narrow_probabilities > 0.1 * np.mean(shoulders_face_narrow_probabilities)).astype(np.uint8)
+    small_mask_only_narrow_foreground_row_stacked = (
+                shoulders_face_narrow_probabilities > 0.1 * np.mean(shoulders_face_narrow_probabilities)).astype(
+        np.uint8)
 
-    small_mask_only_foreground_2d = small_mask_only_narrow_foreground_row_stacked.reshape((SHOULDERS_HEIGHT - OVERHEAD_HEIGHT, right_index - left_index + 1))
+    small_mask_only_foreground_2d = small_mask_only_narrow_foreground_row_stacked.reshape(
+        (SHOULDERS_HEIGHT - OVERHEAD_HEIGHT, right_index - left_index + 1))
     omega_b_around_face_indices = choose_indices_for_background(small_mask_only_foreground_2d, 300)
     ''' COMPARE FOREGROUND WITH BACKGROUND '''
     shoulders_face_wide_probabilities = np.fromiter(
@@ -140,23 +142,27 @@ def remove_signs(frame_index, original_frame, mask, shoulders_and_face_narrow_pd
         indices=omega_b_around_face_indices, bw_method=1)
     background_around_face_probabilites = background_around_face_pdf(small_image_row_stacked)
 
-    small_mask_probs_stacked = (shoulders_face_wide_probabilities > background_around_face_probabilites).astype(np.uint8)
+    small_mask_probs_stacked = (shoulders_face_wide_probabilities > background_around_face_probabilites).astype(
+        np.uint8)
 
     final_small_mask_stacked = small_mask_probs_stacked * small_mask_only_narrow_foreground_row_stacked
 
-    final_small_mask_2d = final_small_mask_stacked.reshape((SHOULDERS_HEIGHT - OVERHEAD_HEIGHT, right_index - left_index + 1))
+    final_small_mask_2d = final_small_mask_stacked.reshape(
+        (SHOULDERS_HEIGHT - OVERHEAD_HEIGHT, right_index - left_index + 1))
     person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = final_small_mask_2d
     cv2.imwrite(f'face_frame_{frame_index}.png', scale_matrix_0_to_255(person_mask))
     cv2.imwrite(f'face_frame_{frame_index}_color.png',
                 apply_mask_on_color_frame(original_frame, person_mask))
 
-    person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.erode(person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], np.ones((7, 1)), iterations=1)
-    person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.erode(person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], np.ones((1, 7)), iterations=1)
+    person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.erode(
+        person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], np.ones((5, 1)), iterations=1)
+    person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.erode(
+        person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], np.ones((1, 5)), iterations=1)
     cv2.imwrite(f'face_erode_frame_{frame_index}.png', scale_matrix_0_to_255(person_mask))
     cv2.imwrite(f'face_erode_frame_{frame_index}_color.png',
                 apply_mask_on_color_frame(original_frame, person_mask))
 
-    person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.dilate(person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], np.ones((5, 5)), iterations=2)
+
     # person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.dilate(person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], np.ones((5, 5)), iterations=1)
     person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.morphologyEx(
         person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], cv2.MORPH_CLOSE,
@@ -166,6 +172,7 @@ def remove_signs(frame_index, original_frame, mask, shoulders_and_face_narrow_pd
     cv2.imwrite(f'face_closing_frame_{frame_index}_color.png',
                 apply_mask_on_color_frame(original_frame, person_mask))
 
+
     person_mask = person_mask.astype(np.uint8)
     img, contours, hierarchy = cv2.findContours(person_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
@@ -174,11 +181,37 @@ def remove_signs(frame_index, original_frame, mask, shoulders_and_face_narrow_pd
     cv2.imwrite(f'contours_face_{frame_index}.png', img)
     contour_mask = np.zeros(person_mask.shape)
     cv2.fillPoly(contour_mask, pts=[contours[0]], color=1)
-    person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = contour_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1]
+    person_mask = contour_mask
     person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.morphologyEx(
         person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], cv2.MORPH_CLOSE,
         np.ones((10, 10), np.uint8), iterations=4)
-    person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.dilate(person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], np.ones((5, 5)), iterations=1)
+
+    propagate_top_right_kernel = np.ones((10, 10)).astype(np.uint8)
+    propagate_top_right_kernel[:5, :] = 0
+    propagate_top_right_kernel[:, 5:] = 0
+    person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.dilate(
+        person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], propagate_top_right_kernel,
+        iterations=1)
+
+
+    half_identity_kernel = np.identity(10).astype(np.uint8)
+    half_identity_kernel[5:, :] = 0
+    person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.dilate(
+        person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], half_identity_kernel,
+        iterations=1)
+
+
+    cv2.imwrite(f'face_specialdilate_frame_{frame_index}_color.png',
+                apply_mask_on_color_frame(original_frame, person_mask))
+
+
+
+
+    # person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.dilate(
+    #     person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], np.ones((5, 5)), iterations=1)
+
+    # person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = cv2.dilate(
+    #     person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], propagate_top_right_kernel, iterations=1)
 
     cv2.imwrite(f'face_contour_closed_{frame_index}_color.png',
                 apply_mask_on_color_frame(original_frame, person_mask))
