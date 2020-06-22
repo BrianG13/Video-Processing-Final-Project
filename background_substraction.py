@@ -51,7 +51,10 @@ def background_substraction(input_video_path, output_video_path):
     probs_mask_after_closing_list = []
     probs_mask_eroison_list = []
     contour_color_list = []
+    fine_tuned_with_shoes_color_list = []
     mask_for_building_kde = frame_92(frames_bgr[92])
+
+
 
     omega_f_indices = choose_indices_for_foreground(mask_for_building_kde, 200)
     omega_b_indices = choose_indices_for_background(mask_for_building_kde, 200)
@@ -67,8 +70,9 @@ def background_substraction(input_video_path, output_video_path):
         if not success:
             break
 
-        if not(i%20 == 0):
+        if i != 137:
             continue
+
         '''COMMENTING THIS, LOADING FRAME 92, SO ALL THIS CALCULCATIONS OVER TIME ARE NOT NECESSARY'''
         # curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
         # curr_h, curr_s, curr_v = cv2.split(curr_hsv)
@@ -151,10 +155,16 @@ def background_substraction(input_video_path, output_video_path):
 
         mask_fine_tuned_with_shoes = np.copy(mask_fine_tuned_after_contours)
         mask_fine_tuned_with_shoes[SHOES_HEIGHT:,:] = mask_after_shoes_fix[SHOES_HEIGHT:,:]
+        mask_fine_tuned_with_shoes = cv2.erode(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
+        mask_fine_tuned_with_shoes = cv2.dilate(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
+        fine_tuned_with_shoes_color = apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes)
+        fine_tuned_with_shoes_color_list.append(fine_tuned_with_shoes_color)
         cv2.imwrite(f'fine_tune_contours_and_shoes_{i}.png',apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
 
-    # write_video('original_with_or_mask_and_blue.avi', frames=original_with_or_mask_and_blue_results, fps=fps, out_size=(w, h),
-    #             is_color=True)
+
+
+    write_video('background_substraction.avi', frames=fine_tuned_with_shoes_color_list, fps=fps, out_size=(w, h),
+                is_color=True)
     write_video('probs_mask_after_erosion_before_closing.avi', frames=probs_mask_eroison_list, fps=fps, out_size=(w, h),
                 is_color=False)
     write_video('probs_mask_after_closing.avi', frames=probs_mask_after_closing_list, fps=fps, out_size=(w, h),
