@@ -67,106 +67,109 @@ def background_substraction(input_video_path, output_video_path):
     background_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_b_indices, bw_method=2)
     foreground_memory = dict()
     background_memory = dict()
+
     ''''''
-    #
-    # for i in range(n_frames):
-    #     print("Frame: " + str(i) + "/" + str(n_frames))
-    #     success, curr = cap.read()
-    #     if not success:
-    #         break
-    #
-    #     '''COMMENTING THIS, LOADING FRAME 92, SO ALL THIS CALCULCATIONS OVER TIME ARE NOT NECESSARY'''
-    #     # curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
-    #     # curr_h, curr_s, curr_v = cv2.split(curr_hsv)
-    #     # curr_b, curr_g, curr_r = cv2.split(curr)
-    #     # diff_s = np.abs(medians_frame_s - curr_s).astype(np.uint8)
-    #     # s_diff_from_median_list.append(diff_s)
-    #     # diff_v = np.abs(medians_frame_v - curr_v).astype(np.uint8)
-    #     # v_diff_from_median_list.append(diff_v)
-    #     # diff_b = np.abs(medians_frame_b - curr_b).astype(np.uint8)
-    #     # b_diff_from_median_list.append(diff_b)
-    #     # mask_s = (diff_s > np.mean(diff_s) * 5)
-    #     # mask_v = (diff_v > np.mean(diff_v) * 5)
-    #     # mask_or = (mask_s | mask_v).astype(np.uint8)
-    #
-    #     # weighted_mask = scale_matrix_0_to_255(
-    #     #     (0.5 * (diff_s - np.mean(diff_s) * 5) + 0.5 * (diff_v - np.mean(diff_v) * 7) > 0).astype(np.uint8))
-    #
-    #     # kernel = np.ones((1, 1), np.uint8)
-    #     # dilation = cv2.dilate(mask_or, kernel, iterations=1)
-    #     #
-    #     # frame_after_or_flt = apply_mask_on_color_frame(curr, dilation)
-    #     # original_with_or_mask_results.append(frame_after_or_flt)
-    #     #
-    #     # # Filtering blue colors
-    #     # blue_mask = (curr_b < 140).astype(np.uint8)
-    #     # blue_kernel = np.ones((3, 3), np.uint8)
-    #     # blue_mask = cv2.erode(blue_mask, blue_kernel, iterations=2).astype(np.uint8)
-    #     # frame_after_or_and_blue_flt = apply_mask_on_color_frame(frame_after_or_flt, blue_mask)
-    #     # original_with_or_mask_and_blue_results.append(frame_after_or_and_blue_flt)
-    #     '''END OF BIG COMMENT'''
-    #
-    #     row_stacked_original_frame = curr.reshape((h * w), 3)
-    #     foreground_probabilities = np.fromiter(map(lambda elem: check_in_dict(foreground_memory, elem, foreground_pdf),
-    #                                                map(tuple, row_stacked_original_frame)), dtype=float)
-    #     foreground_probabilities = foreground_probabilities.reshape((h, w))
-    #     background_probabilities = np.fromiter(map(lambda elem: check_in_dict(background_memory, elem, background_pdf),
-    #                                                map(tuple, row_stacked_original_frame)), dtype=float)
-    #     background_probabilities = background_probabilities.reshape((h, w))
-    #
-    #     probs_mask = foreground_probabilities > background_probabilities
-    #     probs_mask = probs_mask.astype(np.uint8) * 255
-    #
-    #     probs_mask_eroison = cv2.erode(probs_mask, np.ones((3, 1), np.uint8), iterations=2)
-    #     probs_mask_eroison = cv2.erode(probs_mask_eroison, np.ones((1, 3), np.uint8), iterations=1)
-    #
-    #     cv2.imwrite(f'probs_mask_eroison_frame_{i}.png', probs_mask_eroison)
-    #     probs_mask_eroison_list.append(probs_mask_eroison)
-    #
-    #     closing = cv2.morphologyEx(probs_mask_eroison, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
-    #     probs_mask_after_closing_list.append(closing)
-    #     cv2.imwrite(f'probs_mask_frame_closing_{i}.png', closing)
-    #
-    #     img, contours, hierarchy = cv2.findContours(closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    #     contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    #     # cv2.drawContours(curr, contours, 0, (0, 255, 0), 3)
-    #     # cv2.imwrite(f'contours_probs_{i}.png', curr)
-    #     contour_mask = np.zeros((h, w))  # create a single channel 200x200 pixel black image
-    #     cv2.fillPoly(contour_mask, pts=[contours[0]], color=1)
-    #     cv2.imwrite(f'filled_contour_img_{i}.png', scale_matrix_0_to_255(contour_mask))
-    #     contour_color_image = apply_mask_on_color_frame(curr, contour_mask)
-    #     contour_color_list.append(contour_color_image)
-    #     cv2.imwrite(f'contours_color_img_{i}.png', contour_color_image)
-    #
-    #     mask_fine_tuned_after_contours = fine_tune_contour_mask(frame_index=i,
-    #                                                             contour_mask=contour_mask,
-    #                                                             original_frame=curr,
-    #                                                             background_pdf=background_pdf,
-    #                                                             background_memory=background_memory,
-    #                                                             foreground_pdf=foreground_pdf,
-    #                                                             foreground_memory=foreground_memory)
-    #     mask_after_shoes_fix = restore_shoes(frame_index=i,
-    #                                          contour_mask=mask_fine_tuned_after_contours,
-    #                                          original_frame=curr,
-    #                                          background_pdf=background_pdf,
-    #                                          background_memory=background_memory,
-    #                                          foreground_pdf=foreground_pdf,
-    #                                          foreground_memory=foreground_memory,
-    #                                          medians_frame_g=medians_frame_g,
-    #                                          mask_to_classify_shoes_from_ground=mask_for_building_kde)
-    #
-    #     mask_fine_tuned_with_shoes = np.copy(mask_fine_tuned_after_contours)
-    #     mask_fine_tuned_with_shoes[SHOES_HEIGHT:, :] = mask_after_shoes_fix[SHOES_HEIGHT:, :]
-    #     mask_fine_tuned_with_shoes = cv2.erode(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
-    #     mask_fine_tuned_with_shoes = cv2.dilate(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
-    #     fine_tuned_with_shoes_color = apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes)
-    #     fine_tuned_with_shoes_color_list.append(fine_tuned_with_shoes_color)
-    #     fine_tuned_with_shoes_mask_list.append(mask_fine_tuned_with_shoes)
-    #     cv2.imwrite(f'fine_tune_contours_and_shoes_{i}.png',
-    #                 apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
-    #     cv2.imwrite(f'fine_tune_contours_and_shoes_mask_{i}.png',
-    #                 scale_matrix_0_to_255(mask_fine_tuned_with_shoes))
-    #
+
+    for i in range(n_frames):
+        print("Frame: " + str(i) + "/" + str(n_frames))
+        success, curr = cap.read()
+        if not success:
+            break
+
+        '''COMMENTING THIS, LOADING FRAME 92, SO ALL THIS CALCULCATIONS OVER TIME ARE NOT NECESSARY'''
+        # curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
+        # curr_h, curr_s, curr_v = cv2.split(curr_hsv)
+        # curr_b, curr_g, curr_r = cv2.split(curr)
+        # diff_s = np.abs(medians_frame_s - curr_s).astype(np.uint8)
+        # s_diff_from_median_list.append(diff_s)
+        # diff_v = np.abs(medians_frame_v - curr_v).astype(np.uint8)
+        # v_diff_from_median_list.append(diff_v)
+        # diff_b = np.abs(medians_frame_b - curr_b).astype(np.uint8)
+        # b_diff_from_median_list.append(diff_b)
+        # mask_s = (diff_s > np.mean(diff_s) * 5)
+        # mask_v = (diff_v > np.mean(diff_v) * 5)
+        # mask_or = (mask_s | mask_v).astype(np.uint8)
+
+        # weighted_mask = scale_matrix_0_to_255(
+        #     (0.5 * (diff_s - np.mean(diff_s) * 5) + 0.5 * (diff_v - np.mean(diff_v) * 7) > 0).astype(np.uint8))
+
+        # kernel = np.ones((1, 1), np.uint8)
+        # dilation = cv2.dilate(mask_or, kernel, iterations=1)
+        #
+        # frame_after_or_flt = apply_mask_on_color_frame(curr, dilation)
+        # original_with_or_mask_results.append(frame_after_or_flt)
+        #
+        # # Filtering blue colors
+        # blue_mask = (curr_b < 140).astype(np.uint8)
+        # blue_kernel = np.ones((3, 3), np.uint8)
+        # blue_mask = cv2.erode(blue_mask, blue_kernel, iterations=2).astype(np.uint8)
+        # frame_after_or_and_blue_flt = apply_mask_on_color_frame(frame_after_or_flt, blue_mask)
+        # original_with_or_mask_and_blue_results.append(frame_after_or_and_blue_flt)
+        '''END OF BIG COMMENT'''
+
+        row_stacked_original_frame = curr.reshape((h * w), 3)
+        foreground_probabilities = np.fromiter(map(lambda elem: check_in_dict(foreground_memory, elem, foreground_pdf),
+                                                   map(tuple, row_stacked_original_frame)), dtype=float)
+        foreground_probabilities = foreground_probabilities.reshape((h, w))
+        background_probabilities = np.fromiter(map(lambda elem: check_in_dict(background_memory, elem, background_pdf),
+                                                   map(tuple, row_stacked_original_frame)), dtype=float)
+        background_probabilities = background_probabilities.reshape((h, w))
+
+        probs_mask = foreground_probabilities > background_probabilities
+        probs_mask = probs_mask.astype(np.uint8) * 255
+
+        probs_mask_eroison = cv2.erode(probs_mask, np.ones((3, 1), np.uint8), iterations=2)
+        probs_mask_eroison = cv2.erode(probs_mask_eroison, np.ones((1, 3), np.uint8), iterations=1)
+
+        cv2.imwrite(f'probs_mask_eroison_frame_{i}.png', probs_mask_eroison)
+        probs_mask_eroison_list.append(probs_mask_eroison)
+
+        closing = cv2.morphologyEx(probs_mask_eroison, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+        closing = cv2.morphologyEx(probs_mask_eroison, cv2.MORPH_CLOSE, np.ones((10, 1), np.uint8))
+        probs_mask_after_closing_list.append(closing)
+        cv2.imwrite(f'probs_mask_frame_closing_{i}.png', closing)
+
+        img, contours, hierarchy = cv2.findContours(closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)
+        # cv2.drawContours(curr, contours, 0, (0, 255, 0), 3)
+        # cv2.imwrite(f'contours_probs_{i}.png', curr)
+        contour_mask = np.zeros((h, w))  # create a single channel 200x200 pixel black image
+        cv2.fillPoly(contour_mask, pts=[contours[0]], color=1)
+        cv2.imwrite(f'filled_contour_img_{i}.png', scale_matrix_0_to_255(contour_mask))
+        contour_color_image = apply_mask_on_color_frame(curr, contour_mask)
+        contour_color_list.append(contour_color_image)
+        cv2.imwrite(f'contours_color_img_{i}.png', contour_color_image)
+
+        mask_fine_tuned_after_contours = fine_tune_contour_mask(frame_index=i,
+                                                                contour_mask=contour_mask,
+                                                                original_frame=curr,
+                                                                background_pdf=background_pdf,
+                                                                background_memory=background_memory,
+                                                                foreground_pdf=foreground_pdf,
+                                                                foreground_memory=foreground_memory)
+        mask_after_shoes_fix = restore_shoes(frame_index=i,
+                                             contour_mask=mask_fine_tuned_after_contours,
+                                             original_frame=curr,
+                                             background_pdf=background_pdf,
+                                             background_memory=background_memory,
+                                             foreground_pdf=foreground_pdf,
+                                             foreground_memory=foreground_memory,
+                                             medians_frame_g=medians_frame_g,
+                                             mask_to_classify_shoes_from_ground=mask_for_building_kde)
+
+        mask_fine_tuned_with_shoes = np.copy(mask_fine_tuned_after_contours)
+        mask_fine_tuned_with_shoes[SHOES_HEIGHT:, :] = mask_after_shoes_fix[SHOES_HEIGHT:, :]
+        mask_fine_tuned_with_shoes = cv2.erode(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
+        mask_fine_tuned_with_shoes = cv2.dilate(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
+        fine_tuned_with_shoes_color = apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes)
+        fine_tuned_with_shoes_color_list.append(fine_tuned_with_shoes_color)
+        fine_tuned_with_shoes_mask_list.append(mask_fine_tuned_with_shoes)
+        cv2.imwrite(f'fine_tune_contours_and_shoes_{i}.png',
+                    apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
+        cv2.imwrite(f'fine_tune_contours_and_shoes_mask_{i}.png',
+                    scale_matrix_0_to_255(mask_fine_tuned_with_shoes))
+
+
     fine_tuned_with_shoes_mask_list = load_masks_from_middle()  # TODO- DELETE THIS HACK!
     shoulders_face_narrow_pdf = build_shoulders_face_pdf(fine_tuned_with_shoes_mask_list[FRAME_INDEX_FOR_FACE_TUNING],
                                                          frames_bgr[FRAME_INDEX_FOR_FACE_TUNING],

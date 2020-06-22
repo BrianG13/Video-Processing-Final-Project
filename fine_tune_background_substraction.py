@@ -196,7 +196,7 @@ def remove_signs(frame_index, original_frame, mask, shoulders_and_face_narrow_pd
         person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1], np.ones((3,3),dtype=np.uint8),
         iterations=1)
 
-    cv2.imwrite(f'face_contour_closed_{frame_index}_color.png',
+    cv2.imwrite(f'contours_first_shot_after_dilate{frame_index}_color.png',
                 apply_mask_on_color_frame(original_frame, person_mask))
 
     return person_mask
