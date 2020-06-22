@@ -1,5 +1,6 @@
-SHOES_HEIGHT = 790  # 825
-
+SHOES_HEIGHT = 790
+SHOULDERS_HEIGHT = 405
+OVERHEAD_HEIGHT = 160
 
 import numpy as np
 import cv2

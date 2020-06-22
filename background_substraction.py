@@ -17,7 +17,12 @@ from kernel_estimation import (
     estimate_pdf
 )
 
-from fine_tune_background_substraction import fine_tune_contour_mask, restore_shoes
+from fine_tune_background_substraction import (
+    fine_tune_contour_mask,
+    restore_shoes,
+    build_shoulders_face_pdf,
+    remove_signs
+)
 
 
 def background_substraction(input_video_path, output_video_path):
@@ -51,10 +56,8 @@ def background_substraction(input_video_path, output_video_path):
     probs_mask_after_closing_list = []
     probs_mask_eroison_list = []
     contour_color_list = []
-    fine_tuned_with_shoes_color_list = []
+    fine_tuned_with_shoes_color_list ,fine_tuned_with_shoes_mask_list = [],[]
     mask_for_building_kde = frame_92(frames_bgr[92])
-
-
 
     omega_f_indices = choose_indices_for_foreground(mask_for_building_kde, 200)
     omega_b_indices = choose_indices_for_background(mask_for_building_kde, 200)
@@ -63,14 +66,14 @@ def background_substraction(input_video_path, output_video_path):
     background_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_b_indices,bw_method=2)
     foreground_memory = dict()
     background_memory = dict()
+    wanted_indices = [21,22,35,36,60,95,117,119,132,136,139,145,183,204]
     for i in range(n_frames):
-
         print("Frame: " + str(i) + "/" + str(n_frames))
         success, curr = cap.read()
         if not success:
             break
 
-        if i != 137:
+        if i not in wanted_indices:
             continue
 
         '''COMMENTING THIS, LOADING FRAME 92, SO ALL THIS CALCULCATIONS OVER TIME ARE NOT NECESSARY'''
@@ -159,10 +162,28 @@ def background_substraction(input_video_path, output_video_path):
         mask_fine_tuned_with_shoes = cv2.dilate(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
         fine_tuned_with_shoes_color = apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes)
         fine_tuned_with_shoes_color_list.append(fine_tuned_with_shoes_color)
+        fine_tuned_with_shoes_mask_list.append(mask_fine_tuned_with_shoes)
         cv2.imwrite(f'fine_tune_contours_and_shoes_{i}.png',apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
 
 
+    shoulders_face_pdf = build_shoulders_face_pdf(fine_tuned_with_shoes_mask_list[wanted_indices.index(145)],frames_bgr[145],bw_method=0.28) # TODO - FIX THIS SHIT! TO 145
 
+
+    shoulders_and_face_pdf_memory = dict()
+    for frame_index in range(n_frames):
+        if frame_index not in wanted_indices:
+            continue
+        remove_signs_mask = remove_signs(frame_index=frame_index, # TODO - CHANGE THIS SHIT! THIS SHOULD BE INDEX FRAME INSIDE FOR LOOP
+                                      original_frame=frames_bgr[frame_index],  # TODO - CHANGE THIS SHIT! THIS SHOULD BE INDEX FRAME INSIDE FOR LOOP
+                                      mask=fine_tuned_with_shoes_mask_list[wanted_indices.index(frame_index)], # TODO - CHANGE THIS SHIT! THIS SHOULD BE INDEX FRAME INSIDE FOR LOOP
+                                      shoulders_and_face_pdf=shoulders_face_pdf,
+                                     shoulders_and_face_pdf_memory = shoulders_and_face_pdf_memory
+                                    )
+
+
+
+
+    exit() # TODO - REMOVE!
     write_video('background_substraction.avi', frames=fine_tuned_with_shoes_color_list, fps=fps, out_size=(w, h),
                 is_color=True)
     write_video('probs_mask_after_erosion_before_closing.avi', frames=probs_mask_eroison_list, fps=fps, out_size=(w, h),
