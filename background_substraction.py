@@ -166,7 +166,7 @@ def background_substraction(input_video_path, output_video_path):
         cv2.imwrite(f'fine_tune_contours_and_shoes_{i}.png',apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
 
 
-    shoulders_face_pdf = build_shoulders_face_pdf(fine_tuned_with_shoes_mask_list[wanted_indices.index(145)],frames_bgr[145],bw_method=0.28) # TODO - FIX THIS SHIT! TO 145
+    shoulders_face_pdf = build_shoulders_face_pdf(fine_tuned_with_shoes_mask_list[wanted_indices.index(145)],frames_bgr[145],bw_method=0.3) # TODO - FIX THIS SHIT! TO 145
 
 
     shoulders_and_face_pdf_memory = dict()

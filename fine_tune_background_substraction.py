@@ -106,8 +106,16 @@ def restore_shoes(frame_index, original_frame, contour_mask,
 def build_shoulders_face_pdf(mask,image,bw_method):
     small_mask = mask[:SHOULDERS_HEIGHT,:]
     small_image = image[:SHOULDERS_HEIGHT,:]
+    small_mask = cv2.erode(small_mask,np.ones((2,2)),iterations=1)
     omega_f_indices = choose_indices_for_foreground(small_mask, 200)
     foreground_pdf = estimate_pdf(original_frame=small_image, indices=omega_f_indices, bw_method=bw_method)
+
+    image_copy = np.copy(image)
+    for index in range(omega_f_indices.shape[0]):
+        image = cv2.circle(image_copy, (omega_f_indices[index][1], omega_f_indices[index][0]), 1, (0, 255, 0), 2)
+    # Displaying the image
+    cv2.imwrite('circles_face_pdf.png', image_copy)
+
     return foreground_pdf
 
 
