@@ -148,6 +148,8 @@ def background_substraction(input_video_path, output_video_path):
         #                                                         background_memory=background_memory,
         #                                                         foreground_pdf=foreground_pdf,
         #                                                         foreground_memory=foreground_memory)
+
+
         mask_fine_tuned_after_contours = preloaded_tuned_mask_list[i]
         shoes_foreground_specialist_pdf = build_shoes_pdf(frame_index=i,
                                                           original_frame=frames_bgr[6],
@@ -167,14 +169,20 @@ def background_substraction(input_video_path, output_video_path):
 
         mask_fine_tuned_with_shoes = np.copy(mask_fine_tuned_after_contours)
         mask_fine_tuned_with_shoes[LEGS_HEIGHT:, :] = mask_after_shoes_fix[LEGS_HEIGHT:, :]
-        # mask_fine_tuned_with_shoes = cv2.erode(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
-        # mask_fine_tuned_with_shoes = cv2.dilate(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
+        mask_fine_tuned_with_shoes = cv2.morphologyEx(mask_fine_tuned_with_shoes, cv2.MORPH_CLOSE, np.ones((2, 1), np.uint8))
         fine_tuned_with_shoes_color_list.append(apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
         fine_tuned_with_shoes_mask_list.append(mask_fine_tuned_with_shoes)
         cv2.imwrite(f'fine_tune_contours_and_shoes_{i}.png',
                     apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
         cv2.imwrite(f'fine_tune_contours_and_shoes_mask_{i}.png',
                     scale_matrix_0_to_255(mask_fine_tuned_with_shoes))
+
+
+    shoes_foreground_specialist_pdf = build_shoes_pdf(frame_index=i,
+                                                      original_frame=frames_bgr[6],
+                                                      mask=mask_fine_tuned_after_contours,
+                                                      # TODO - THIS IS A HACK THAT LOADS THE MASK
+                                                      bw_method=1)
 
 
     # fine_tuned_with_shoes_mask_list = load_masks_from_middle()  # TODO- DELETE THIS HACK!

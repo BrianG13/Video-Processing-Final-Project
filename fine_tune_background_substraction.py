@@ -135,12 +135,10 @@ def restore_shoes(frame_index, original_frame, contour_mask,shoes_specialist_pdf
     person_mask = cv2.morphologyEx(person_mask, cv2.MORPH_CLOSE,
                                     np.ones((10, 10), np.uint8), iterations=1)
 
-
     cv2.imwrite(f'filled_shoes_{frame_index}_color.png',
                 apply_mask_on_color_frame(original_frame, person_mask))
 
-
-    return fat_shoes_mask
+    return person_mask
 
 
 def build_shoes_pdf(frame_index,original_frame,mask,bw_method):
