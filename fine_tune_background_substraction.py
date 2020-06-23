@@ -5,9 +5,10 @@ from utils import (
     apply_mask_on_color_frame,
     check_in_dict,
     scale_matrix_0_to_255,
-    SHOES_HEIGHT,
+    LEGS_HEIGHT,
     SHOULDERS_HEIGHT,
     OVERHEAD_HEIGHT,
+    SHOES_HEIGHT,
     choose_indices_for_background,
     choose_indices_for_foreground,
 )
@@ -41,28 +42,28 @@ def fine_tune_contour_mask(frame_index, original_frame, contour_mask,
 
     cv2.imwrite(f'test_color_fine_tune_no_eps_closing_{frame_index}.png',
                 apply_mask_on_color_frame(original_frame, dilated_contour_mask_frame_tuned))
+    cv2.imwrite(f'fine_tune_no_eps_closing_mask_{frame_index}.png',
+                scale_matrix_0_to_255(dilated_contour_mask_frame_tuned))
 
     return dilated_contour_mask_frame_tuned
 
 
-def restore_shoes(frame_index, original_frame, contour_mask,
+def restore_shoes(frame_index, original_frame, contour_mask,shoes_specialist_pdf,
                   background_pdf, background_memory, foreground_pdf, foreground_memory,
                   medians_frame_g, mask_to_classify_shoes_from_ground):
     _, original_frame_green, _ = cv2.split(original_frame)
     fat_shoes_mask = np.copy(contour_mask)
-    fat_shoes_mask[:SHOES_HEIGHT, :] = 0
-    fat_shoes_mask[SHOES_HEIGHT:, :] = cv2.dilate(fat_shoes_mask[SHOES_HEIGHT:, :], np.ones((5, 5), np.uint8),
-                                                  iterations=1)
-    fat_shoes_mask[SHOES_HEIGHT:, :] = cv2.dilate(fat_shoes_mask[SHOES_HEIGHT:, :], np.ones((15, 1), np.uint8),
-                                                  iterations=3)
+    fat_shoes_mask[:LEGS_HEIGHT, :] = 0
+    fat_shoes_mask[LEGS_HEIGHT:, :] = cv2.dilate(fat_shoes_mask[LEGS_HEIGHT:, :], np.ones((5, 5), np.uint8),
+                                                 iterations=1)
+    fat_shoes_mask[LEGS_HEIGHT:, :] = cv2.dilate(fat_shoes_mask[LEGS_HEIGHT:, :], np.ones((15, 1), np.uint8),
+                                                 iterations=3)
 
-    # cv2.imshow('ss',scale_matrix_0_to_255(fat_shoes_mask))
-    # cv2.waitKey(0)
+
     shoes_indices_rectangle_x_axis = np.where(fat_shoes_mask == 1)[1]
     left_shoe_index, right_shoe_index = np.min(shoes_indices_rectangle_x_axis), np.max(shoes_indices_rectangle_x_axis)
     right_shoe_index += 30
-    small_mask_around_shoes = fat_shoes_mask[SHOES_HEIGHT:, left_shoe_index:right_shoe_index + 1]
-    omega_f_around_shoes_indices = choose_indices_for_foreground(small_mask_around_shoes, 300)
+    small_mask_around_shoes = fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1]
     omega_b_around_shoes_indices = choose_indices_for_background(small_mask_around_shoes, 300)
 
     # image = np.copy(original_frame[SHOES_HEIGHT:,left_shoe_index:right_shoe_index+1])
@@ -79,30 +80,95 @@ def restore_shoes(frame_index, original_frame, contour_mask,
     # cv2.imshow('background', image)
     # cv2.waitKey(0)
 
-    foreground_around_shoes_pdf = estimate_pdf(
-        original_frame=original_frame[SHOES_HEIGHT:, left_shoe_index:right_shoe_index + 1],
-        indices=omega_f_around_shoes_indices, bw_method=3)
+
     background_around_shoes_pdf = estimate_pdf(
-        original_frame=original_frame[SHOES_HEIGHT:, left_shoe_index:right_shoe_index + 1],
+        original_frame=original_frame[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1],
         indices=omega_b_around_shoes_indices, bw_method=1)
-    small_original_frame_stacked = original_frame[SHOES_HEIGHT:, left_shoe_index:right_shoe_index + 1].reshape((-1, 3))
-    around_shoes_foreground_probabilities = foreground_around_shoes_pdf(small_original_frame_stacked)
+
+    small_original_frame_stacked = original_frame[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1].reshape((-1, 3))
+    around_shoes_foreground_probabilities = shoes_specialist_pdf(small_original_frame_stacked)
     around_shoes_background_probabilities = background_around_shoes_pdf(small_original_frame_stacked)
 
-    around_shoes_classifier_mask = around_shoes_foreground_probabilities > around_shoes_background_probabilities
+    around_shoes_classifier_mask = around_shoes_foreground_probabilities / (around_shoes_background_probabilities + around_shoes_foreground_probabilities)
+    around_shoes_classifier_mask = (around_shoes_classifier_mask > 0.55).astype(np.uint8)
     around_shoes_classifier_mask = around_shoes_classifier_mask.reshape((-1, right_shoe_index - left_shoe_index + 1))
-    fat_shoes_mask[SHOES_HEIGHT:, left_shoe_index:right_shoe_index + 1] = around_shoes_classifier_mask
+    fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1] = np.maximum(around_shoes_classifier_mask,contour_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1])
 
-    fat_shoes_mask[SHOES_HEIGHT:, left_shoe_index:right_shoe_index + 1] = cv2.morphologyEx(
-        fat_shoes_mask[SHOES_HEIGHT:, left_shoe_index:right_shoe_index + 1], cv2.MORPH_CLOSE,
-        np.ones((10, 10), np.uint8), iterations=3)
-
-    cv2.imwrite(f'classifer_shoes_frame_{frame_index}.png', scale_matrix_0_to_255(fat_shoes_mask))
-    cv2.imwrite(f'classifer_shoes_frame_{frame_index}_color.png',
+    cv2.imwrite(f'classifer_shoes_before_close_frame_{frame_index}_color.png',
                 apply_mask_on_color_frame(original_frame, fat_shoes_mask))
+
+    fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1] = cv2.morphologyEx(
+        fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1], cv2.MORPH_CLOSE,
+        np.ones((15, 1), np.uint8), iterations=1)
+    fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1] = cv2.morphologyEx(
+        fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1], cv2.MORPH_CLOSE,
+        np.ones((8, 8), np.uint8), iterations=1)
+    cv2.imwrite(f'shoes_close_{frame_index}_color.png',
+                apply_mask_on_color_frame(original_frame, fat_shoes_mask))
+    fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1] = cv2.morphologyEx(
+        fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1], cv2.MORPH_OPEN,
+        np.ones((6, 1), np.uint8), iterations=1)
+    fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1] = cv2.morphologyEx(
+        fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1], cv2.MORPH_OPEN,
+        np.ones((1, 6), np.uint8), iterations=1)
+    cv2.imwrite(f'shoes_open_{frame_index}_color.png',
+                apply_mask_on_color_frame(original_frame, fat_shoes_mask))
+
+
+    #####
+    img, contours, hierarchy = cv2.findContours(fat_shoes_mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    one_foot_mask = np.zeros(fat_shoes_mask.shape)
+    cv2.fillPoly(one_foot_mask, pts=[contours[0]], color=1)
+
+    if len(contours)>1:
+        second_foot_mask = np.zeros(fat_shoes_mask.shape)
+        cv2.fillPoly(second_foot_mask, pts=[contours[1]], color=1)
+        person_one_foot_mask = one_foot_mask * fat_shoes_mask
+        person_second_foot_mask = second_foot_mask * fat_shoes_mask
+        person_mask = np.maximum(person_one_foot_mask,person_second_foot_mask)
+    else:
+        person_mask = one_foot_mask * fat_shoes_mask
+
+    person_mask = cv2.morphologyEx(person_mask, cv2.MORPH_OPEN, np.ones((15, 1), np.uint8), iterations=1)
+
+    person_mask = cv2.morphologyEx(person_mask, cv2.MORPH_CLOSE,
+                                    np.ones((10, 10), np.uint8), iterations=1)
+
+
+    cv2.imwrite(f'filled_shoes_{frame_index}_color.png',
+                apply_mask_on_color_frame(original_frame, person_mask))
+
 
     return fat_shoes_mask
 
+
+def build_shoes_pdf(frame_index,original_frame,mask,bw_method):
+
+    _, original_frame_green, _ = cv2.split(original_frame)
+    fat_shoes_mask = np.copy(mask)
+    ### HACK LOAD # TODO
+    fat_shoes_mask = cv2.imread('fine_tune_no_eps_closing_mask_6.png',cv2.IMREAD_GRAYSCALE)
+    fat_shoes_mask = fat_shoes_mask / 255
+    ## END HACK LOAD
+    fat_shoes_mask[:LEGS_HEIGHT, :] = 0
+    fat_shoes_mask[LEGS_HEIGHT:, :] = cv2.dilate(fat_shoes_mask[LEGS_HEIGHT:, :], np.ones((5, 5), np.uint8),
+                                                 iterations=1)
+    fat_shoes_mask[LEGS_HEIGHT:, :] = cv2.dilate(fat_shoes_mask[LEGS_HEIGHT:, :], np.ones((15, 1), np.uint8),
+                                                 iterations=3)
+    fat_shoes_mask[:SHOES_HEIGHT, :] = 0
+    fat_shoes_mask[970:, :] = 0
+    for x in range(255,355):
+        for y in range(SHOES_HEIGHT,970):
+            fat_shoes_mask[y,x] = 0 if y < 0.4*x +773 else 1
+    fat_shoes_mask[954:,255:] = 0
+
+    omega_f_around_shoes_indices = choose_indices_for_foreground(fat_shoes_mask, 300)
+    foreground_around_shoes_pdf = estimate_pdf(
+        original_frame=original_frame,
+        indices=omega_f_around_shoes_indices, bw_method=bw_method)
+
+    return foreground_around_shoes_pdf
 
 def build_shoulders_face_pdf(mask, image, bw_method):
     small_mask = mask[:SHOULDERS_HEIGHT, :]
