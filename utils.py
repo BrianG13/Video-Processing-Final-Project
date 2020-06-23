@@ -111,6 +111,10 @@ def load_entire_video(cap, color_space='bgr'):
             break
         if color_space == 'bgr':
             frames.append(curr)
+        elif color_space == 'yuv':
+            frames.append(cv2.cvtColor(curr, cv2.COLOR_BGR2YUV))
+        elif color_space == 'bw':
+            frames.append(cv2.cvtColor(curr, cv2.COLOR_BGR2GRAY))  # cap should be created with isColor=False
         else:
             frames.append(cv2.cvtColor(curr, cv2.COLOR_BGR2HSV))
         continue

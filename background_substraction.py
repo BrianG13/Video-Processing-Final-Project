@@ -178,11 +178,6 @@ def background_substraction(input_video_path, output_video_path):
                     scale_matrix_0_to_255(mask_fine_tuned_with_shoes))
 
 
-    shoes_foreground_specialist_pdf = build_shoes_pdf(frame_index=i,
-                                                      original_frame=frames_bgr[6],
-                                                      mask=mask_fine_tuned_after_contours,
-                                                      # TODO - THIS IS A HACK THAT LOADS THE MASK
-                                                      bw_method=1)
 
 
     # fine_tuned_with_shoes_mask_list = load_masks_from_middle()  # TODO- DELETE THIS HACK!
