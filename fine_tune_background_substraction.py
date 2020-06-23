@@ -105,14 +105,14 @@ def restore_shoes(frame_index, original_frame, contour_mask,shoes_specialist_pdf
         np.ones((8, 8), np.uint8), iterations=1)
     cv2.imwrite(f'shoes_close_{frame_index}_color.png',
                 apply_mask_on_color_frame(original_frame, fat_shoes_mask))
-    fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1] = cv2.morphologyEx(
-        fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1], cv2.MORPH_OPEN,
-        np.ones((6, 1), np.uint8), iterations=1)
-    fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1] = cv2.morphologyEx(
-        fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1], cv2.MORPH_OPEN,
-        np.ones((1, 6), np.uint8), iterations=1)
-    cv2.imwrite(f'shoes_open_{frame_index}_color.png',
-                apply_mask_on_color_frame(original_frame, fat_shoes_mask))
+    # fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1] = cv2.morphologyEx(
+    #     fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1], cv2.MORPH_OPEN,
+    #     np.ones((6, 1), np.uint8), iterations=1)
+    # fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1] = cv2.morphologyEx(
+    #     fat_shoes_mask[LEGS_HEIGHT:, left_shoe_index:right_shoe_index + 1], cv2.MORPH_OPEN,
+    #     np.ones((1, 6), np.uint8), iterations=1)
+    # cv2.imwrite(f'shoes_open_{frame_index}_color.png',
+    #             apply_mask_on_color_frame(original_frame, fat_shoes_mask))
 
 
     #####
@@ -254,7 +254,7 @@ def remove_signs(frame_index, original_frame, mask, shoulders_and_face_narrow_pd
     cv2.drawContours(img, contours, 0, (0, 255, 0), 3)
     contour_mask = np.zeros(person_mask.shape)
     cv2.fillPoly(contour_mask, pts=[contours[0]], color=1)
-    person_mask = contour_mask
+    person_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1] = contour_mask[OVERHEAD_HEIGHT:SHOULDERS_HEIGHT, left_index:right_index + 1]
     cv2.imwrite(f'contours_first_shot_{frame_index}_color.png',
                 apply_mask_on_color_frame(original_frame, person_mask))
 

@@ -106,7 +106,7 @@ def background_substraction(input_video_path, output_video_path):
         # frame_after_or_and_blue_flt = apply_mask_on_color_frame(frame_after_or_flt, blue_mask)
         # original_with_or_mask_and_blue_results.append(frame_after_or_and_blue_flt)
         '''END OF BIG COMMENT'''
-
+        # TODO - COMMENTS LOADING HACK!
         # row_stacked_original_frame = curr.reshape((h * w), 3)
         # foreground_probabilities = np.fromiter(map(lambda elem: check_in_dict(foreground_memory, elem, foreground_pdf),
         #                                            map(tuple, row_stacked_original_frame)), dtype=float)
@@ -167,17 +167,16 @@ def background_substraction(input_video_path, output_video_path):
 
         mask_fine_tuned_with_shoes = np.copy(mask_fine_tuned_after_contours)
         mask_fine_tuned_with_shoes[LEGS_HEIGHT:, :] = mask_after_shoes_fix[LEGS_HEIGHT:, :]
-        mask_fine_tuned_with_shoes = cv2.erode(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
-        mask_fine_tuned_with_shoes = cv2.dilate(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
-        fine_tuned_with_shoes_color = apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes)
-        fine_tuned_with_shoes_color_list.append(fine_tuned_with_shoes_color)
+        # mask_fine_tuned_with_shoes = cv2.erode(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
+        # mask_fine_tuned_with_shoes = cv2.dilate(mask_fine_tuned_with_shoes, np.ones((4, 1), np.uint8), iterations=4)
+        fine_tuned_with_shoes_color_list.append(apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
         fine_tuned_with_shoes_mask_list.append(mask_fine_tuned_with_shoes)
         cv2.imwrite(f'fine_tune_contours_and_shoes_{i}.png',
                     apply_mask_on_color_frame(curr, mask_fine_tuned_with_shoes))
         cv2.imwrite(f'fine_tune_contours_and_shoes_mask_{i}.png',
                     scale_matrix_0_to_255(mask_fine_tuned_with_shoes))
 
-    exit()
+
     # fine_tuned_with_shoes_mask_list = load_masks_from_middle()  # TODO- DELETE THIS HACK!
     shoulders_face_narrow_pdf = build_shoulders_face_pdf(fine_tuned_with_shoes_mask_list[FRAME_INDEX_FOR_FACE_TUNING],
                                                          frames_bgr[FRAME_INDEX_FOR_FACE_TUNING],
@@ -205,11 +204,6 @@ def background_substraction(input_video_path, output_video_path):
                 is_color=False)
     write_video('background_substraction.avi', frames=removed_signs_color_frame_list, fps=fps, out_size=(w, h),
                 is_color=True)
-    write_video('probs_mask_after_erosion_before_closing.avi', frames=probs_mask_eroison_list, fps=fps, out_size=(w, h),
-                is_color=False)
-    write_video('probs_mask_after_closing.avi', frames=probs_mask_after_closing_list, fps=fps, out_size=(w, h),
-                is_color=False)
-    write_video('original_only_contour.avi', frames=contour_color_list, fps=fps, out_size=(w, h), is_color=True)
     release_video_files(cap, out)
 
 
