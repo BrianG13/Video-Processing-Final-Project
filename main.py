@@ -1,3 +1,4 @@
+import cv2
 from video_stabilization import stabilize_video
 from background_substraction import background_substraction
 from matting import video_matting
@@ -21,4 +22,5 @@ output_video_name = f'Stabilized_video_maxCorners{MAX_CORNERS}_qualityLevel{QUAL
 output_path = f'{folder_name}/{output_video_name}'
 # stabilize_video('INPUT.avi', output_path, good_features_to_track_params, SMOOTH_RADIUS)
 # background_substraction('stabilized_video.avi','black_and_white.avi')
-video_matting('stabilized_video.avi','background_substraction_mask.avi','output_matting.avi')
+video_matting('stabilized_video.avi','background_substraction_mask.avi',
+              'output_matting.avi',cv2.imread('background.jpg'))

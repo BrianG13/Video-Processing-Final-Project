@@ -126,7 +126,7 @@ def background_substraction(input_video_path, output_video_path):
         #
         # closing = cv2.morphologyEx(probs_mask_eroison, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
         # closing = cv2.morphologyEx(probs_mask_eroison, cv2.MORPH_CLOSE,
-        #                            np.ones((10, 1), np.uint8))  # Connect detached hands
+        #                            np.identity(10, np.uint8))  # Connect detached hands
         # probs_mask_after_closing_list.append(closing)
         # cv2.imwrite(f'probs_mask_frame_closing_{i}.png', closing)
         #
