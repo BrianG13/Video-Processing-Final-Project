@@ -149,46 +149,34 @@ def video_matting(input_stabilize_video, binary_video_path, output_video_path,
         smaller_matted_frame[smaller_decided_foreground_mask_indices] = smaller_bgr_frame[smaller_decided_foreground_mask_indices]
         smaller_matted_frame[smaller_decided_background_mask_indices] = smaller_new_background[smaller_decided_background_mask_indices]
         cv2.imwrite(f'before_matting_{frame_index}.png', smaller_matted_frame)
+        smaller_matted_frame[smaller_undecided_mask_indices] = smaller_alpha[smaller_undecided_mask_indices][:, np.newaxis]*smaller_bgr_frame[smaller_undecided_mask_indices] + \
+                                                               (1-smaller_alpha[smaller_undecided_mask_indices][:, np.newaxis]) *smaller_new_background[smaller_undecided_mask_indices]
 
         ''' Narrow band - refinement - matting - solving argmin problem '''
-        for i in range(len(smaller_undecided_mask_indices[0])):
-            print(f'Fixing pixel: {i} / {len(smaller_undecided_mask_indices[0])}')
-            pixel_coords = (smaller_undecided_mask_indices[0][i], smaller_undecided_mask_indices[1][i])
-            foreground_neighbors_indices, background_neighbors_indices = get_foreground_and_background_neighbors(
-                        pixel_coords=pixel_coords,
-                        smaller_decided_background_mask=smaller_decided_background_mask,
-                        smaller_decided_foreground_mask=smaller_decided_foreground_mask,
-                        window_size=REFINEMENT_WINDOW_SIZE)
-
-            foreground_best_neighbor_indices, background_best_neighbor_indices = find_best_couple(pixel_coords,
-                                                                                                    smaller_bgr_frame,
-                                                                                                  smaller_new_background,
-                                                                                                  smaller_alpha,
-                                                                                                  foreground_neighbors_indices,
-                                                                                                  background_neighbors_indices
-                                                                                                  )
-            alpha_x = smaller_alpha[pixel_coords]
-            smaller_matted_frame[pixel_coords] = alpha_x*smaller_bgr_frame[foreground_best_neighbor_indices] + \
-                                                    (1-alpha_x)*smaller_new_background[pixel_coords]
+        # for i in range(len(smaller_undecided_mask_indices[0])):
+        #     print(f'Fixing pixel: {i} / {len(smaller_undecided_mask_indices[0])}')
+        #     pixel_coords = (smaller_undecided_mask_indices[0][i], smaller_undecided_mask_indices[1][i])
+        #     foreground_neighbors_indices, background_neighbors_indices = get_foreground_and_background_neighbors(
+        #                 pixel_coords=pixel_coords,
+        #                 smaller_decided_background_mask=smaller_decided_background_mask,
+        #                 smaller_decided_foreground_mask=smaller_decided_foreground_mask,
+        #                 window_size=REFINEMENT_WINDOW_SIZE)
+        #
+        #     foreground_best_neighbor_indices, background_best_neighbor_indices = find_best_couple(pixel_coords,
+        #                                                                                             smaller_bgr_frame,
+        #                                                                                           smaller_new_background,
+        #                                                                                           smaller_alpha,
+        #                                                                                           foreground_neighbors_indices,
+        #                                                                                           background_neighbors_indices
+        #                                                                                           )
+        #     alpha_x = smaller_alpha[pixel_coords]
+        #     smaller_matted_frame[pixel_coords] = alpha_x*smaller_bgr_frame[foreground_best_neighbor_indices] + \
+        #                                             (1-alpha_x)*smaller_new_background[pixel_coords]
 
         cv2.imwrite(f'after_matting_{frame_index}.png', smaller_matted_frame)
-
+        input('hi')
 
 def find_best_couple(pixel_coords,smaller_bgr_frame,smaller_new_background,smaller_alpha,foreground_neighbors_indices,background_neighbors_indices):
-    # min_result = float('inf')
-    # best_foreground_neighbor = None
-    # best_background_neighbor = None
-    # for i in range(len(foreground_neighbors_indices[0])):
-    #     color_xf = smaller_bgr_frame[foreground_neighbors_indices[0][i], foreground_neighbors_indices[1][i]]
-    #     for j in range(len(background_neighbors_indices[0])):
-    #         color_xb = smaller_new_background[background_neighbors_indices[0][j],background_neighbors_indices[1][j]]
-    #         alpha_x = smaller_alpha[pixel_coords]
-    #         original_color = smaller_bgr_frame[pixel_coords]
-    #         norma = np.linalg.norm(alpha_x*color_xf + (1-alpha_x)*color_xb -original_color)
-    #         if norma < min_result:
-    #             min_result = norma
-    #             best_foreground_neighbor = (foreground_neighbors_indices[0][i], foreground_neighbors_indices[1][i])
-    #             best_background_neighbor = (background_neighbors_indices[0][j], background_neighbors_indices[1][j])
     original_color = smaller_bgr_frame[pixel_coords]
     alpha_x = smaller_alpha[pixel_coords]
     color_xf = smaller_bgr_frame[foreground_neighbors_indices]
