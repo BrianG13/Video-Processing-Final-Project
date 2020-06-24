@@ -13,6 +13,43 @@ ERODE_ITERATIONS = 9
 DILATE_ITERATIONS = 3
 GEODISTK_ITERATIONS = 2
 
+
+# beach = cv2.imread('beach.png',cv2.IMREAD_GRAYSCALE)
+# x = cv2.imread('original.png',cv2.IMREAD_GRAYSCALE)
+# beach = cv2.resize(beach,(x.shape[1],x.shape[0]))
+# cv2.imwrite('beach.png',beach)
+# cutout(
+#     # input image path
+#     "original.png",
+#     # input trimap path
+#     "trimap.png",
+#     # output cutout path
+#     "lemur_cutout.png",
+# )
+# 
+# from pymatting import *
+# 
+# scale = 1.0
+# 
+# image = load_image("original.png", "RGB", scale, "box")
+# trimap = load_image("trimap.png", "GRAY", scale, "nearest")
+# 
+# # estimate alpha from image and trimap
+# alpha = estimate_alpha_cf(image, trimap)
+# 
+# # load new background
+# new_background = load_image("beach.png", "RGB", scale, "box")
+# 
+# # estimate foreground from image and alpha
+# foreground, background = estimate_foreground_ml(image, alpha, return_background=True)
+# 
+# # blend foreground with background and alpha
+# new_image = blend(foreground, new_background, alpha)
+# 
+# # save results in a grid
+# images = [image, trimap, alpha, new_image]
+# grid = make_grid(images)
+# save_image("lemur_at_the_beach.png", grid)
 def video_matting(input_stabilize_video, binary_video_path, output_video_path):
     # Read input video
     cap_stabilize, _, _, _, fps_stabilize = get_video_files(input_stabilize_video, output_video_path, isColor=True)
@@ -47,9 +84,23 @@ def video_matting(input_stabilize_video, binary_video_path, output_video_path):
         ''' Resize images '''
         smaller_luma_frame = luma_frame[top_index:bottom_index, left_index:right_index]
         smaller_bgr_frame = bgr_frame[top_index:bottom_index, left_index:right_index]
-        foreground_mask = cv2.erode(original_mask_frame, np.ones((3, 3)), iterations=ERODE_ITERATIONS)
-        cv2.imwrite(f'foreground_scrible_{frame_index}.png',
-                    apply_mask_on_color_frame(frames_bgr[frame_index], foreground_mask))
+
+        '''Eroded foreground mask option'''
+        # foreground_mask = cv2.erode(original_mask_frame, np.ones((3, 3)), iterations=ERODE_ITERATIONS)
+        # cv2.imwrite(f'foreground_scrible_{frame_index}.png',
+        #             apply_mask_on_color_frame(frames_bgr[frame_index], foreground_mask))
+
+        '''Sampled foreground mask option'''
+        foreground_mask = cv2.erode(original_mask_frame, np.ones((3, 3)), iterations=5)
+        foreground_mask_indices = choose_indices_for_foreground(foreground_mask,300)
+        foreground_mask = np.zeros(foreground_mask.shape,dtype=np.uint8)
+        for i in range(foreground_mask_indices.shape[0]):
+            foreground_mask[foreground_mask_indices[i][0],foreground_mask_indices[i][1]] = 1
+        image = np.copy(frames_bgr[frame_index])
+        for index in range(foreground_mask_indices.shape[0]):
+            image = cv2.circle(image, (foreground_mask_indices[index][1], foreground_mask_indices[index][0]), 2, (0, 255, 0), 1)
+        ## Displaying the image
+        cv2.imwrite(f'foreground_mask_sample_{frame_index}.png', image)
 
 
         '''Resize foreground mask & Build distance map for foreground'''
@@ -92,8 +143,10 @@ def video_matting(input_stabilize_video, binary_video_path, output_video_path):
         smaller_equal_dist_matrix_mask = (0.5 - EPSILON < smaller_alpha).astype(np.uint8) * (
                     smaller_alpha < 0.5 + EPSILON).astype(np.uint8)
         smaller_equal_dist_matrix_mask_indices = np.where(smaller_equal_dist_matrix_mask == 1)
-        smaller_bgr_frame[smaller_equal_dist_matrix_mask_indices] = np.asarray([0, 255, 0])
+        # smaller_bgr_frame[smaller_equal_dist_matrix_mask_indices] = np.asarray([0, 255, 0]) - TODO REMOVE
         cv2.imwrite(f'epsilon_color_{frame_index}.png',smaller_bgr_frame)
+
+
 
 
 
