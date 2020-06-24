@@ -1,17 +1,16 @@
 import cv2
 import numpy as np
 import GeodisTK
-import matplotlib.pyplot as plt
-from PIL import Image
+
 
 from utils import load_entire_video, get_video_files, choose_indices_for_foreground, choose_indices_for_background, \
     apply_mask_on_color_frame, scale_matrix_0_to_255
 
-EPSILON = 0.4
+EPSILON = 0.3
 ERODE_ITERATIONS = 6
 DILATE_ITERATIONS = 3
 GEODISTK_ITERATIONS = 2
-REFINEMENT_WINDOW_SIZE = 15
+REFINEMENT_WINDOW_SIZE = 20
 
 
 # beach = cv2.imread('beach.png',cv2.IMREAD_GRAYSCALE)
@@ -176,22 +175,35 @@ def video_matting(input_stabilize_video, binary_video_path, output_video_path,
 
 
 def find_best_couple(pixel_coords,smaller_bgr_frame,smaller_new_background,smaller_alpha,foreground_neighbors_indices,background_neighbors_indices):
-    min_result = float('inf')
-    best_foreground_neighbor = None
-    best_background_neighbor = None
-    for i in range(len(foreground_neighbors_indices[0])):
-        color_xf = smaller_bgr_frame[foreground_neighbors_indices[0][i], foreground_neighbors_indices[1][i]]
-        for j in range(len(background_neighbors_indices[0])):
-            color_xb = smaller_new_background[background_neighbors_indices[0][j],background_neighbors_indices[1][j]]
-            alpha_x = smaller_alpha[pixel_coords]
-            original_color = smaller_bgr_frame[pixel_coords]
-            norma = np.linalg.norm(alpha_x*color_xf + (1-alpha_x)*color_xb -original_color)
-            if norma < min_result:
-                min_result = norma
-                best_foreground_neighbor = (foreground_neighbors_indices[0][i], foreground_neighbors_indices[1][i])
-                best_background_neighbor = (background_neighbors_indices[0][j], background_neighbors_indices[1][j])
+    # min_result = float('inf')
+    # best_foreground_neighbor = None
+    # best_background_neighbor = None
+    # for i in range(len(foreground_neighbors_indices[0])):
+    #     color_xf = smaller_bgr_frame[foreground_neighbors_indices[0][i], foreground_neighbors_indices[1][i]]
+    #     for j in range(len(background_neighbors_indices[0])):
+    #         color_xb = smaller_new_background[background_neighbors_indices[0][j],background_neighbors_indices[1][j]]
+    #         alpha_x = smaller_alpha[pixel_coords]
+    #         original_color = smaller_bgr_frame[pixel_coords]
+    #         norma = np.linalg.norm(alpha_x*color_xf + (1-alpha_x)*color_xb -original_color)
+    #         if norma < min_result:
+    #             min_result = norma
+    #             best_foreground_neighbor = (foreground_neighbors_indices[0][i], foreground_neighbors_indices[1][i])
+    #             best_background_neighbor = (background_neighbors_indices[0][j], background_neighbors_indices[1][j])
+    original_color = smaller_bgr_frame[pixel_coords]
+    alpha_x = smaller_alpha[pixel_coords]
+    color_xf = smaller_bgr_frame[foreground_neighbors_indices]
+    color_xb = smaller_new_background[background_neighbors_indices]
+    repeated_xf = np.repeat(color_xf, repeats=color_xb.shape[0], axis=0)
+    repeated_xb = np.resize(np.stack([color_xb for _ in range(color_xf.shape[0])], axis=0),(color_xf.shape[0]*color_xb.shape[0],3))
+    original_color_matrix = np.ones((color_xf.shape[0]*color_xb.shape[0],3))*original_color
+    norm_big_matrix = np.linalg.norm(alpha_x*repeated_xf + (1-alpha_x)*repeated_xb - original_color_matrix)
+    minimum_index = np.argmin(norm_big_matrix)
+    best_background_index = minimum_index % color_xb.shape[0]
+    best_foreground_index = minimum_index // color_xb.shape[0]
+    foreground_best_coord = (foreground_neighbors_indices[0][best_foreground_index] , foreground_neighbors_indices[1][best_foreground_index])
+    background_best_coord = (background_neighbors_indices[0][best_background_index] , background_neighbors_indices[1][best_background_index])
 
-    return best_foreground_neighbor, best_background_neighbor
+    return foreground_best_coord, background_best_coord
 
 def get_foreground_and_background_neighbors(pixel_coords, smaller_decided_background_mask,
                                             smaller_decided_foreground_mask,
