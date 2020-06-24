@@ -6,13 +6,13 @@ from kernel_estimation import estimate_pdf
 from utils import load_entire_video, get_video_files, choose_indices_for_foreground, choose_indices_for_background, \
     apply_mask_on_color_frame, scale_matrix_0_to_255
 
-EPSILON = 0.01
+EPSILON = 0.4
 ERODE_ITERATIONS = 6
 DILATE_ITERATIONS = 3
 GEODISTK_ITERATIONS = 2
 REFINEMENT_WINDOW_SIZE = 20
 KDE_BW = 1
-R = 0.1
+R = 0.001
 
 def video_matting(input_stabilize_video, binary_video_path, output_video_path,
                   new_background):
@@ -86,10 +86,24 @@ def video_matting(input_stabilize_video, binary_video_path, output_video_path,
 
 
         ''' Building narrow band undecided zone'''
-        smaller_narrow_band_mask = (np.abs(smaller_foreground_distance_map - smaller_background_distance_map) < EPSILON).astype(np.uint8)
+        # smaller_foreground_distance_map = smaller_foreground_distance_map / (smaller_foreground_distance_map + smaller_background_distance_map)
+        # smaller_background_distance_map = 1-smaller_foreground_distance_map
+        # smaller_narrow_band_mask = (np.abs(smaller_foreground_distance_map - smaller_background_distance_map) < EPSILON).astype(np.uint8)
+        #
+
+        smaller_narrow_band_mask = (smaller_foreground_distance_map <= smaller_background_distance_map).astype(np.uint8)
+        smaller_narrow_band_mask = cv2.morphologyEx(smaller_narrow_band_mask, cv2.MORPH_GRADIENT, np.ones((3,3)).astype(np.uint8))
+        smaller_narrow_band_mask = cv2.dilate(smaller_narrow_band_mask,cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8)))
+        cv2.imshow('s',scale_matrix_0_to_255(smaller_narrow_band_mask))
+        cv2.waitKey(0)
         smaller_narrow_band_mask_indices = np.where(smaller_narrow_band_mask == 1)
-        smaller_decided_foreground_mask = (smaller_foreground_distance_map < smaller_background_distance_map - EPSILON/2).astype(np.uint8)
-        smaller_decided_background_mask = (smaller_background_distance_map >= smaller_foreground_distance_map - EPSILON/2).astype(np.uint8)
+
+        smaller_undecided_image = np.copy(smaller_bgr_frame)
+        smaller_undecided_image[smaller_narrow_band_mask_indices] = np.asarray([0, 255, 0])
+        cv2.imwrite(f'epsilon_color_{frame_index}.png', smaller_undecided_image)
+
+        smaller_decided_foreground_mask = (smaller_foreground_distance_map < smaller_background_distance_map - EPSILON).astype(np.uint8)
+        smaller_decided_background_mask = (smaller_background_distance_map >= smaller_foreground_distance_map - EPSILON).astype(np.uint8)
         omega_f_indices = choose_indices_for_foreground(smaller_decided_foreground_mask, 200)
         omega_b_indices = choose_indices_for_background(smaller_decided_background_mask, 200)
         foreground_pdf = estimate_pdf(original_frame=smaller_bgr_frame, indices=omega_f_indices, bw_method=KDE_BW)
@@ -156,7 +170,6 @@ def video_matting(input_stabilize_video, binary_video_path, output_video_path,
         #                                             (1-alpha_x)*smaller_new_background[pixel_coords]
 
         cv2.imwrite(f'after_matting_{frame_index}.png', smaller_matted_frame)
-        input('hi')
 
 def find_best_couple(pixel_coords,smaller_bgr_frame,smaller_new_background,smaller_alpha,foreground_neighbors_indices,background_neighbors_indices):
     original_color = smaller_bgr_frame[pixel_coords]
