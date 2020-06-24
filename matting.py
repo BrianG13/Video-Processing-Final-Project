@@ -1,12 +1,12 @@
 import cv2
 import numpy as np
 import GeodisTK
-
+import time
 from kernel_estimation import estimate_pdf
 from utils import load_entire_video, get_video_files, choose_indices_for_foreground, choose_indices_for_background, \
-    apply_mask_on_color_frame, scale_matrix_0_to_255
+    apply_mask_on_color_frame, scale_matrix_0_to_255,write_video
 
-EPSILON = 0.4
+EPSILON = 0.99
 ERODE_ITERATIONS = 6
 DILATE_ITERATIONS = 3
 GEODISTK_ITERATIONS = 2
@@ -16,6 +16,7 @@ R = 0.001
 
 def video_matting(input_stabilize_video, binary_video_path, output_video_path,
                   new_background):
+    START_TIME = time.time()
     # Read input video
     cap_stabilize, _, w, h, fps_stabilize = get_video_files(input_stabilize_video, output_video_path, isColor=True)
     cap_binary, _, _, _, fps_binary = get_video_files(binary_video_path, 'delete.avi', isColor=False)
@@ -23,19 +24,14 @@ def video_matting(input_stabilize_video, binary_video_path, output_video_path,
     # Get frame count
     n_frames = int(cap_stabilize.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # Read first frame
-    _, prev = cap_stabilize.read()
-
     frames_bgr = load_entire_video(cap_stabilize, color_space='bgr')
-    # frames_hsv = load_entire_video(cap_stabilize, color_space='hsv')
     frames_yuv = load_entire_video(cap_stabilize, color_space='yuv')
     frames_binary = load_entire_video(cap_binary, color_space='bw')
 
     '''Resize new background'''
     new_background = cv2.resize(new_background, (w, h))
-
-    # for frame_index in range(n_frames):
-    for frame_index in [6, 52, 55, 66, 78, 107, 112, 113, 121, 128, 136, 172, 177, 187, 197, 204]:
+    full_matted_frames_list = list()
+    for frame_index in range(n_frames):
         print(frame_index)
         luma_frame, _, _ = cv2.split(frames_yuv[frame_index])
         bgr_frame = frames_bgr[frame_index]
@@ -56,51 +52,35 @@ def video_matting(input_stabilize_video, binary_video_path, output_video_path,
         smaller_new_background = new_background[top_index:bottom_index, left_index:right_index]
         '''Eroded foreground mask option'''
         foreground_mask = cv2.erode(original_mask_frame, np.ones((3, 3)), iterations=ERODE_ITERATIONS)
-        cv2.imwrite(f'foreground_scrible_{frame_index}.png',
-                    apply_mask_on_color_frame(frames_bgr[frame_index], foreground_mask))
+        # cv2.imwrite(f'foreground_scrible_{frame_index}.png',
+        #             apply_mask_on_color_frame(frames_bgr[frame_index], foreground_mask))
 
         '''Resize foreground mask & Build distance map for foreground'''
         smaller_foreground_mask = foreground_mask[top_index:bottom_index, left_index:right_index]
         smaller_foreground_distance_map = GeodisTK.geodesic2d_raster_scan(smaller_luma_frame, smaller_foreground_mask,
                                                                           1.0, GEODISTK_ITERATIONS)
-        # max_result_foreground_dismap = np.max(foreground_distance_map)
-        # foreground_distance_map = foreground_distance_map / max_result_foreground_dismap
-        # foreground_distance_map = gamma_correction(foreground_distance_map,gamma=0.1)#np.apply_along_axis(lambda x: gamma_correction(x=x,gamma=3),result)
-        # foreground_distance_map = foreground_distance_map * max_result_foreground_dismap
-        cv2.imwrite(f'foreground_distmap_{frame_index}.png',
-                    cv2.cvtColor(smaller_foreground_distance_map, cv2.COLOR_GRAY2BGR))
+        # cv2.imwrite(f'foreground_distmap_{frame_index}.png',
+        #             cv2.cvtColor(smaller_foreground_distance_map, cv2.COLOR_GRAY2BGR))
 
         '''Resize image & Build distance map for foreground'''
         background_mask = cv2.dilate(original_mask_frame, np.ones((3, 3)), iterations=DILATE_ITERATIONS)
-        cv2.imwrite(f'background_scrible_{frame_index}.png',
-                    apply_mask_on_color_frame(frames_bgr[frame_index], background_mask))
+        # cv2.imwrite(f'background_scrible_{frame_index}.png',
+        #             apply_mask_on_color_frame(frames_bgr[frame_index], background_mask))
         background_mask = 1 - background_mask
         smaller_background_mask = background_mask[top_index:bottom_index, left_index:right_index]
         smaller_background_distance_map = GeodisTK.geodesic2d_raster_scan(smaller_luma_frame, smaller_background_mask,
                                                                           1.0, GEODISTK_ITERATIONS)
-        # max_result_background_dismap = np.max(background_distance_map)
-        # background_distance_map = background_distance_map / max_result_background_dismap
-        # background_distance_map = gamma_correction(background_distance_map,gamma=0.1)#np.apply_along_axis(lambda x: gamma_correction(x=x,gamma=3),result)
-        # background_distance_map = background_distance_map * max_result_background_dismap
-        cv2.imwrite(f'background_distmap_{frame_index}.png', smaller_background_distance_map)
+        # cv2.imwrite(f'background_distmap_{frame_index}.png', smaller_background_distance_map)
 
 
         ''' Building narrow band undecided zone'''
-        # smaller_foreground_distance_map = smaller_foreground_distance_map / (smaller_foreground_distance_map + smaller_background_distance_map)
-        # smaller_background_distance_map = 1-smaller_foreground_distance_map
-        # smaller_narrow_band_mask = (np.abs(smaller_foreground_distance_map - smaller_background_distance_map) < EPSILON).astype(np.uint8)
-        #
-
-        smaller_narrow_band_mask = (smaller_foreground_distance_map <= smaller_background_distance_map).astype(np.uint8)
-        smaller_narrow_band_mask = cv2.morphologyEx(smaller_narrow_band_mask, cv2.MORPH_GRADIENT, np.ones((3,3)).astype(np.uint8))
-        smaller_narrow_band_mask = cv2.dilate(smaller_narrow_band_mask,cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8)))
-        cv2.imshow('s',scale_matrix_0_to_255(smaller_narrow_band_mask))
-        cv2.waitKey(0)
+        smaller_foreground_distance_map = smaller_foreground_distance_map / (smaller_foreground_distance_map + smaller_background_distance_map)
+        smaller_background_distance_map = 1-smaller_foreground_distance_map
+        smaller_narrow_band_mask = (np.abs(smaller_foreground_distance_map - smaller_background_distance_map) < EPSILON).astype(np.uint8)
         smaller_narrow_band_mask_indices = np.where(smaller_narrow_band_mask == 1)
-
         smaller_undecided_image = np.copy(smaller_bgr_frame)
         smaller_undecided_image[smaller_narrow_band_mask_indices] = np.asarray([0, 255, 0])
-        cv2.imwrite(f'epsilon_color_{frame_index}.png', smaller_undecided_image)
+        # cv2.imwrite(f'epsilon_color_{frame_index}.png', smaller_undecided_image)
 
         smaller_decided_foreground_mask = (smaller_foreground_distance_map < smaller_background_distance_map - EPSILON).astype(np.uint8)
         smaller_decided_background_mask = (smaller_background_distance_map >= smaller_foreground_distance_map - EPSILON).astype(np.uint8)
@@ -117,36 +97,8 @@ def video_matting(input_stabilize_video, binary_video_path, output_video_path,
         smaller_alpha[smaller_narrow_band_mask_indices] = alpha_narrow_band
 
         smaller_matted_frame = smaller_alpha[:,:,np.newaxis] * smaller_bgr_frame + (1 - smaller_alpha[:,:,np.newaxis]) * smaller_new_background
-        cv2.imwrite(f'smaller_matted_frame_{frame_index}.png',smaller_matted_frame)
+        # cv2.imwrite(f'smaller_matted_frame_{frame_index}.png',smaller_matted_frame)
 
-        '''Build binary mask from dist map'''
-        # smaller_alpha = smaller_foreground_distance_map / (
-        #         smaller_background_distance_map + smaller_foreground_distance_map)
-        # smaller_alpha = 1 - smaller_alpha
-        # smaller_foreground_beats_background_alpha_mask = (smaller_alpha > 0.5).astype(np.uint8)
-        # cv2.imwrite(f'smaller_foreground_beats_background_alpha_mask_{frame_index}.png',
-        #             cv2.cvtColor(
-        #                 apply_mask_on_color_frame(smaller_bgr_frame, smaller_foreground_beats_background_alpha_mask),
-        #                 cv2.COLOR_BGR2RGB))
-        #
-        # smaller_undecided_mask = (smaller_alpha > EPSILON).astype(np.uint8) * (smaller_alpha < 1 - EPSILON).astype(
-        #     np.uint8)
-        # smaller_undecided_mask_indices = np.where(smaller_undecided_mask == 1)
-        # smaller_undecided_image = np.copy(smaller_bgr_frame)
-        # smaller_undecided_image[smaller_undecided_mask_indices] = np.asarray([0, 255, 0])
-        # cv2.imwrite(f'epsilon_color_{frame_index}.png', smaller_undecided_image)
-        # smaller_decided_foreground_mask = (smaller_alpha >= 1 - EPSILON).astype(np.uint8)
-        # smaller_decided_foreground_mask_indices = np.where(smaller_decided_foreground_mask == 1)
-        # smaller_decided_background_mask = (smaller_alpha <= EPSILON).astype(np.uint8)
-        # smaller_decided_background_mask_indices = np.where(smaller_decided_background_mask == 1)
-        #
-        # smaller_matted_frame = np.copy(smaller_bgr_frame)
-        # smaller_matted_frame[smaller_undecided_mask_indices] = np.asarray([0, 255, 0])
-        # smaller_matted_frame[smaller_decided_foreground_mask_indices] = smaller_bgr_frame[smaller_decided_foreground_mask_indices]
-        # smaller_matted_frame[smaller_decided_background_mask_indices] = smaller_new_background[smaller_decided_background_mask_indices]
-        # cv2.imwrite(f'before_matting_{frame_index}.png', smaller_matted_frame)
-        # smaller_matted_frame[smaller_undecided_mask_indices] = smaller_alpha[smaller_undecided_mask_indices][:, np.newaxis]*smaller_bgr_frame[smaller_undecided_mask_indices] + \
-        #                                                        (1-smaller_alpha[smaller_undecided_mask_indices][:, np.newaxis]) *smaller_new_background[smaller_undecided_mask_indices]
 
         ''' Narrow band - refinement - matting - solving argmin problem '''
         # for i in range(len(smaller_undecided_mask_indices[0])):
@@ -169,7 +121,13 @@ def video_matting(input_stabilize_video, binary_video_path, output_video_path,
         #     smaller_matted_frame[pixel_coords] = alpha_x*smaller_bgr_frame[foreground_best_neighbor_indices] + \
         #                                             (1-alpha_x)*smaller_new_background[pixel_coords]
 
-        cv2.imwrite(f'after_matting_{frame_index}.png', smaller_matted_frame)
+        full_matted_frame = np.copy(new_background)
+        full_matted_frame[top_index:bottom_index, left_index:right_index] = smaller_matted_frame
+        full_matted_frames_list.append(full_matted_frame)
+        # cv2.imwrite(f'after_matting_{frame_index}.png', full_matted_frame)
+
+    write_video(output_path='matted_video.avi', frames=full_matted_frames_list, fps=fps_stabilize, out_size=(w,h), is_color=True)
+    print(f'ENTIRE PROCESS TIME: {time.time()-START_TIME}')
 
 def find_best_couple(pixel_coords,smaller_bgr_frame,smaller_new_background,smaller_alpha,foreground_neighbors_indices,background_neighbors_indices):
     original_color = smaller_bgr_frame[pixel_coords]
