@@ -2,11 +2,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import cv2
+from scipy.stats import gaussian_kde, entropy
+from scipy.special import rel_entr
 
+GAUSSIAN_SIGMA_FOR_KDE_Y = 9000
+GAUSSIAN_SIGMA_FOR_KDE_X = 300
+NUMBER_OF_SAMPLES_TO_KDE = 300
+NUMBER_OF_SAMPLES_TO_KL = 1000
+BW_FOR_KDE = 100
 MU = 0
-SIGMA_X_LOCATION = 1.5
+SIGMA_X_LOCATION = 3
 SIGMA_Y_LOCATION = 1.5
-SIGMA_X_VELOCITY = 0.4
+SIGMA_X_VELOCITY = 2
 SIGMA_Y_VELOCITY = 0.4
 
 
@@ -36,6 +43,51 @@ def predictParticles(initial_state_matrix):
                                np.round(np.random.normal(MU, SIGMA_Y_VELOCITY, size=(1, 100)))
 
     return new_state_matrix.astype(int)
+
+
+def build_KDE(I, rect_info):
+    x, y, half_width, half_height, x_vel, y_vel = rect_info
+    # temp_image = I[y - half_height:y + half_height, x - half_width:x + half_width]
+    mean = [y, x]
+    cov = [[GAUSSIAN_SIGMA_FOR_KDE_Y, 0], [0, GAUSSIAN_SIGMA_FOR_KDE_X]]
+    y_samples,x_samples = np.random.multivariate_normal(mean, cov, NUMBER_OF_SAMPLES_TO_KDE).T
+    y_samples = np.round(y_samples).astype(np.int)
+    y_samples = np.maximum(y_samples,0)
+    y_samples = np.minimum(y_samples,I.shape[0]-1)
+    x_samples = np.round(x_samples).astype(np.int)
+    x_samples = np.maximum(x_samples,0)
+    x_samples = np.minimum(x_samples,I.shape[1]-1)
+    samples = (y_samples,x_samples)
+
+
+    '''Code to draw circles for kde samples'''
+    # image = np.copy(I)
+    # for index in range(samples[0].shape[0]):
+    #     image = cv2.circle(image, (samples[1][index], samples[0][index]), 5, (0, 255, 0), 2)
+    # # Displaying the image
+    # cv2.imshow('sas', image)
+    # cv2.waitKey(0)
+
+    # temp_image_stacked = temp_image.reshape((temp_image.shape[0]*temp_image.shape[1],3))
+    try:
+        # indices_choices = np.random.choice(temp_image_stacked.shape[0], NUMBER_OF_SAMPLES_TO_KDE)
+        sampled_colors = I[samples]
+        pdf = gaussian_kde(sampled_colors.T, bw_method=BW_FOR_KDE)
+        return lambda x: pdf(x.T)
+    except ValueError:
+        input('GOT HERE!')  # TODO - DELETE OR CHANGE TO PRINT
+        return None
+
+
+
+def compute_KL_div(pdf_p,pdf_q):
+    random_colors = np.random.randint(0,255,(NUMBER_OF_SAMPLES_TO_KL,3))
+    p_probabilities = pdf_p(random_colors)
+    q_probabilities = pdf_q(random_colors)
+    a = rel_entr(p_probabilities,q_probabilities)
+    result = np.sum(rel_entr(p_probabilities,q_probabilities))
+    return result # TODO - MAYBE NEED TO SWITCH ORDER
+
 
 
 def compNormHist(I, s_initial):
@@ -73,11 +125,15 @@ def get_slacks_from_weights(weights):
     return np.array(c)
 
 
-def measure(image, particles_list, true_histogram):
+def measure(image, particles_list, true_pdf):
     weights = list()
     for column in particles_list.T:
-        particle_histogram = compNormHist(image, column)
-        weights.append(compBatDist(particle_histogram, true_histogram))
+        particle_pdf = build_KDE(I=image,rect_info=column)
+        # TODO - DIV HERE IS DANGEROUS, REALLY SMALL NUMBER DIVIDING, NEED TO RECEIVE HERE NUMBER BETWEEN 0 TO EXP(20)
+        if particle_pdf is None:
+            weights.append(0)
+        else:
+            weights.append(1/compute_KL_div(particle_pdf, true_pdf))
 
     weights = np.array(weights)
     weights /= np.sum(weights)
@@ -113,7 +169,12 @@ def get_max_match_particle(S, W):
 def showParticles(I, S, W, i, ID):
     avg_particle_x, avg_particle_y = get_avg_particle(S, W)
     max_particle_x, max_particle_y = get_max_match_particle(S, W)
-    avg_particle_x, avg_particle_y = int(avg_particle_x), int(avg_particle_y)
+    try:
+        avg_particle_x, avg_particle_y = int(avg_particle_x), int(avg_particle_y)
+    except Exception:
+        print(S)
+        print(W)
+
 
     fig, ax = plt.subplots(1)
     # Display the image
@@ -131,7 +192,7 @@ def showParticles(I, S, W, i, ID):
     ax.add_patch(rect_avg)
     ax.add_patch(rect_max)
     for index,state in enumerate(S.T):
-        circle1 = plt.Circle((S[0][index], S[1][index]), W[index]*10, color='r')
+        circle1 = plt.Circle((S[0][index], S[1][index]), W[index]*100, color='r')
         ax.add_artist(circle1)
 
 

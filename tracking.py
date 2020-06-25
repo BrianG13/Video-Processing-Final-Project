@@ -4,7 +4,8 @@ import numpy.matlib
 
 import cv2
 
-from tracking_utils import predictParticles, compNormHist, measure, sampleParticles, showParticles
+from tracking_utils import predictParticles, compNormHist, measure, sampleParticles, showParticles, build_KDE, \
+    compute_KL_div
 from utils import get_video_files, load_entire_video
 
 
@@ -16,7 +17,8 @@ def track_video(input_video_path):
     N = 100
 
     # Initial Settings
-    s_initial = [230,  # x center // TODO
+
+    s_initial = [230,  # x center
                  550,  # y center
                  170,  # half width
                  370,  # half height
@@ -24,16 +26,17 @@ def track_video(input_video_path):
                  0]  # velocity y
 
     # CREATE INITIAL PARTICLE MATRIX 'S' (SIZE 6xN)
-    a = np.matlib.repmat(s_initial, N, 1).T
-
     S = predictParticles(np.matlib.repmat(s_initial, N, 1).T)
 
     # LOAD FIRST IMAGE
     I = frames_bgr[0]
 
     # COMPUTE NORMALIZED HISTOGRAM
-    q = compNormHist(I, s_initial)
+    # q = compNormHist(I, s_initial)
     #
+    q = build_KDE(I,s_initial)
+    # result = compute_KL_div(initial_pdf,initial_pdf)
+
     C, _ = measure(I, S, q)
     #
     # s_t_tag = sampleParticles(S, c)
@@ -62,13 +65,14 @@ def track_video(input_video_path):
             showParticles(I, S, W, images_processed, "")
 
 
-def opencv_contrib_track(input_video_path):
+def dd(input_video_path):
     cap_stabilize, _, W, H, fps = get_video_files(input_video_path, 'delete.avi', isColor=True)
     frames_bgr = load_entire_video(cap_stabilize, color_space='bgr')
 
     (major, minor) = cv2.__version__.split(".")[:2]
-
-    tracker = cv2.TrackerCSRT_create()
+    print(major)
+    print(minor)
+    tracker = cv2.TrackerMIL_create()
     # initialize the bounding box coordinates of the object we are going to track
 
 
@@ -78,15 +82,19 @@ def opencv_contrib_track(input_video_path):
     # cv2.waitKey(0)
     # select the bounding box of the object we want to track (make
     # sure you press ENTER or SPACE after selecting the ROI)
-    initBB = cv2.selectROI("Frame", frames_bgr[0], fromCenter=False,
-                           showCrosshair=True)
+    # initBB = cv2.selectROI("Frame", frames_bgr[0], fromCenter=False,
+    #                        showCrosshair=True)
+
     # start OpenCV object tracker using the supplied bounding box
     # coordinates, then start the FPS throughput estimator as well
+    initBB = (76, 248, 296, 695)
     tracker.init(frames_bgr[0], initBB)
 
 
-
+    i=0
     for frame in frames_bgr[1:]:
+        i+=1
+        print(i)
         # check to see if we are currently tracking an object
         # grab the new bounding box coordinates of the object
         (success, box) = tracker.update(frame)
@@ -108,3 +116,7 @@ def opencv_contrib_track(input_video_path):
             text = "{}: {}".format(k, v)
             cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        cv2.imshow(f'{i}',frame)
+        key = cv2.waitKey(1) & 0xFF
+        if key == "q":
+            exit()

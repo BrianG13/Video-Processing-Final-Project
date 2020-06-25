@@ -1,7 +1,7 @@
 import cv2
 from video_stabilization import stabilize_video
 from background_substraction import background_substraction
-from matting import video_matting
+# from matting import video_matting
 from tracking import track_video
 
 MAX_CORNERS = 500
