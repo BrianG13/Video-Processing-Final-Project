@@ -62,7 +62,7 @@ def background_substraction(input_video_path, output_video_path):
     removed_signs_color_frame_list, removed_signs_mask_list = [], []
     fine_tuned_with_shoes_color_list, fine_tuned_with_shoes_mask_list = [], []
     '''Build KDE from specified frame filtered by s,v channels'''
-    mask_for_building_kde = frame_92(frames_bgr[92])
+    mask_for_building_kde = build_person_mask_for_kde(frames_bgr[92])
     omega_f_indices = choose_indices_for_foreground(mask_for_building_kde, 200)
     omega_b_indices = choose_indices_for_background(mask_for_building_kde, 200)
     foreground_pdf = estimate_pdf(original_frame=frames_bgr[92], indices=omega_f_indices, bw_method=2)
@@ -210,12 +210,12 @@ def background_substraction(input_video_path, output_video_path):
     release_video_files(cap, out)
 
 
-def frame_92(curr):
+def build_person_mask_for_kde(frame):
     medians_frame_s = np.load('saturation_median_frame.dat', allow_pickle=True)
     medians_frame_v = np.load('value_median_frame.dat', allow_pickle=True)
-    curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
+    curr_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     curr_h, curr_s, curr_v = cv2.split(curr_hsv)
-    curr_b, curr_g, curr_r = cv2.split(curr)
+    curr_b, curr_g, curr_r = cv2.split(frame)
     diff_s = np.abs(medians_frame_s - curr_s).astype(np.uint8)
     diff_v = np.abs(medians_frame_v - curr_v).astype(np.uint8)
     mask_s = (diff_s > np.mean(diff_s) * 5)
@@ -230,7 +230,6 @@ def frame_92(curr):
 
     final_mask = dilation * blue_mask
     final_mask = cv2.erode(final_mask, np.ones((5, 5), np.uint8), iterations=4)
-    # final_mask = cv2.erode(final_mask, np.ones((5, 1), np.uint8), iterations=3)
 
     cv2.imwrite('frame92_msk.png', scale_matrix_0_to_255(final_mask))
     return final_mask
