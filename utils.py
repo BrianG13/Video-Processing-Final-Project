@@ -26,14 +26,17 @@ def plot_img_with_points(img, points):
     plt.show()
 
 
-def get_video_files(path, output_name, isColor):
+def get_video_files(path,isColor,output_name=None):
     cap = cv2.VideoCapture(path)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Define video codec
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     out_size = (width, height)
-    out = cv2.VideoWriter(output_name, fourcc, fps, out_size, isColor=isColor)
+    if output_name is None:
+        out = None
+    else:
+        out = cv2.VideoWriter(output_name, fourcc, fps, out_size, isColor=isColor)
     return cap, out, width, height, fps
 
 

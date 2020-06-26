@@ -18,8 +18,8 @@ R = 2
 def video_matting(input_stabilize_video, binary_video_path, output_video_path,
                   new_background, transforms_list):
     # Read input video
-    cap_stabilize, _, w, h, fps_stabilize = get_video_files(input_stabilize_video, output_video_path, isColor=True)
-    cap_binary, _, _, _, fps_binary = get_video_files(binary_video_path, 'delete.avi', isColor=False)
+    cap_stabilize, _, w, h, fps_stabilize = get_video_files(path=input_stabilize_video, isColor=True)
+    cap_binary, _, _, _, fps_binary = get_video_files(path=binary_video_path, isColor=False)
 
     # Get frame count
     n_frames = int(cap_stabilize.get(cv2.CAP_PROP_FRAME_COUNT))
