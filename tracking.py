@@ -31,7 +31,8 @@ def track_video(input_video_path):
     # Setup the termination criteria, 10 iterations
     term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0)
     tracking_frames_list = [cv2.rectangle(frames_bgr[0], (x, y), (x + w, y + h), (0, 255, 0), 2)]
-    for frame in frames_bgr[1:]:
+    for frame_index,frame in enumerate(frames_bgr[1:]):
+        print(f"[Tracking] - Frame: {frame_index} / {len(frames_bgr)-1}")
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         dst = cv2.calcBackProject([hsv], [0, 1], roi_hist, [0, 256, 0, 256], 1)
         # apply meanshift to get the new location

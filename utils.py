@@ -114,8 +114,6 @@ def load_entire_video(cap, color_space='bgr'):
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frames = []
     for i in range(n_frames):
-        # print("Frame: " + str(i) + "/" + str(n_frames))
-        # Read next frame
         success, curr = cap.read()
         if not success:
             break
@@ -124,7 +122,7 @@ def load_entire_video(cap, color_space='bgr'):
         elif color_space == 'yuv':
             frames.append(cv2.cvtColor(curr, cv2.COLOR_BGR2YUV))
         elif color_space == 'bw':
-            frames.append(cv2.cvtColor(curr, cv2.COLOR_BGR2GRAY))  # cap should be created with isColor=False
+            frames.append(cv2.cvtColor(curr, cv2.COLOR_BGR2GRAY))
         else:
             frames.append(cv2.cvtColor(curr, cv2.COLOR_BGR2HSV))
         continue
