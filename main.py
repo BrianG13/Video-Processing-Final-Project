@@ -22,7 +22,7 @@ output_video_name = f'Stabilized_video_maxCorners{MAX_CORNERS}_qualityLevel{QUAL
                     f'_blockSize{BLOCK_SIZE}_radius{SMOOTH_RADIUS}.avi'
 output_path = f'{folder_name}/{output_video_name}'
 # transforms_list = stabilize_video('INPUT.avi', output_path, good_features_to_track_params, SMOOTH_RADIUS)
-# background_substraction('stabilized_video.avi','black_and_white.avi')
+# background_substraction('stabilized_video.avi')
 # video_matting('stabilized_video.avi','background_substraction_mask.avi',
 #               'output_matting.avi',cv2.imread('background.jpg'),transforms_list)
 track_video('matted_video.avi')

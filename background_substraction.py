@@ -28,9 +28,9 @@ from fine_tune_background_substraction import (
 )
 
 
-def background_substraction(input_video_path, output_video_path):
+def background_substraction(input_video_path):
     # Read input video
-    cap, out, w, h, fps = get_video_files(input_video_path, output_video_path, isColor=True)
+    cap, out, w, h, fps = get_video_files(path=input_video_path, is_color=True)
     # Get frame count
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 

@@ -15,11 +15,11 @@ KDE_BW = 1
 R = 2
 
 
-def video_matting(input_stabilize_video, binary_video_path, output_video_path,
+def video_matting(input_stabilize_video, binary_video_path,
                   new_background, transforms_list):
     # Read input video
-    cap_stabilize, _, w, h, fps_stabilize = get_video_files(path=input_stabilize_video, isColor=True)
-    cap_binary, _, _, _, fps_binary = get_video_files(path=binary_video_path, isColor=False)
+    cap_stabilize, _, w, h, fps_stabilize = get_video_files(path=input_stabilize_video, is_color=True)
+    cap_binary, _, _, _, fps_binary = get_video_files(path=binary_video_path, is_color=False)
 
     # Get frame count
     n_frames = int(cap_stabilize.get(cv2.CAP_PROP_FRAME_COUNT))

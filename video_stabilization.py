@@ -1,13 +1,13 @@
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
-from utils import get_video_files, release_video_files, smooth, plot_img_with_points, fixBorder
+from utils import get_video_files, release_video_files, smooth, plot_img_with_points, fixBorder, write_video
 
 
 def stabilize_video(input_video_path, output_video_path, good_features_to_track, smooth_radius):
     # Read input video
     # cap = cv2.VideoCapture(input_video_path)
-    cap, out,w, h, fps = get_video_files(input_video_path, output_video_path, isColor=True)
+    cap, out,w, h, fps = get_video_files(path=input_video_path, output_name=output_video_path, is_color=True)
 
     # Get frame count
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -20,7 +20,7 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
     prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
     # Pre-define transformation-store array
     transforms = np.zeros((n_frames - 1, 9), np.float32)
-    transforms_list = list()
+    transforms_list, stabilized_frames_list = [] , []
     for i in range(n_frames):
         # Detect feature points in previous frame
         prev_pts = cv2.goodFeaturesToTrack(prev_gray,
@@ -93,8 +93,10 @@ def stabilize_video(input_video_path, output_video_path, good_features_to_track,
         frame_stabilized = cv2.warpPerspective(frame, m, (w, h))
 
         frame_stabilized = fixBorder(frame_stabilized)
-        out.write(frame_stabilized)
+        stabilized_frames_list.append(frame_stabilized)
         transforms_list.append(m)
 
     release_video_files(cap, out)
+    write_video('stabilize.avi', stabilized_frames_list, fps, (w, h), is_color=True)
+
     return transforms_list
