@@ -30,7 +30,7 @@ def background_substraction(input_video_path):
     #         mask_list[index_frame] = fgMask
 
 
-    mask_list = np.load('knn_masks.np',allow_pickle=True).astype(np.uint8)  # TODO - REMOVE LOADING HACK!
+    # mask_list = np.load('knn_masks.np',allow_pickle=True).astype(np.uint8)  # TODO - REMOVE LOADING HACK!
     contours_colors_list = []
 
     '''COMMENTED OUT WHEN REMOVING LOADING HACK! LOOK FOR TODO with (*)'''
@@ -58,7 +58,8 @@ def background_substraction(input_video_path):
     #     shoes_mask = np.copy(person_and_blue_mask)
     #     shoes_mask[:SHOES_HEIGHT,:] = 0
     #     omega_f_shoes_indices = choose_indices_for_foreground(shoes_mask, 20)
-    #     shoes_mask[:SHOES_HEIGHT,:] = 1
+    #     shoes_mask = np.copy(person_and_blue_mask)
+    #     shoes_mask[:SHOES_HEIGHT-120,:] = 1
     #     omega_b_shoes_indices = choose_indices_for_background(shoes_mask, 20)
     #
     #     if omega_f_colors is None:
@@ -72,7 +73,6 @@ def background_substraction(input_video_path):
     #         omega_b_colors = np.concatenate((omega_b_colors,frame[omega_b_indices[:, 0], omega_b_indices[:, 1], :]))
     #         omega_f_shoes_colors = np.concatenate((omega_f_shoes_colors,frame[omega_f_shoes_indices[:, 0], omega_f_shoes_indices[:, 1], :]))
     #         omega_b_shoes_colors = np.concatenate((omega_b_shoes_colors,frame[omega_b_shoes_indices[:, 0], omega_b_shoes_indices[:, 1], :]))
-    #
 
     person_and_blue_mask_list = np.load('person_and_blue_mask_list.npy',allow_pickle=True)  # TODO(*) - LOADING HACK! REMOVE
     omega_f_colors = np.load('omega_f_colors.npy',allow_pickle=True)  # TODO(*) - LOADING HACK! REMOVE
@@ -122,17 +122,30 @@ def background_substraction(input_video_path):
             map(lambda elem: check_in_dict(background_shoes_pdf_memoization, elem, background_shoes_pdf),
                 map(tuple, small_frame_bgr[small_probs_fg_bigger_bg_mask_black_indices])), dtype=float)
 
-        small_shoes_general_background_probabilities_stacked = np.fromiter(
-            map(lambda elem: check_in_dict(background_pdf_memoization, elem, background_pdf),
-                map(tuple, small_frame_bgr[small_probs_fg_bigger_bg_mask_black_indices])), dtype=float)
-
         shoes_fg_shoes_bg_ratio = small_shoes_foreground_probabilities_stacked / (small_shoes_foreground_probabilities_stacked + small_shoes_background_probabilities_stacked)
-        shoes_fg_general_bg_ratio = small_shoes_foreground_probabilities_stacked / (small_shoes_foreground_probabilities_stacked + small_shoes_general_background_probabilities_stacked)
-        shoes_fg_beats_shoes_bg_mask = (shoes_fg_shoes_bg_ratio > 0.9).astype(np.uint8)
-        shoes_fg_beats_general_bg_mask = (shoes_fg_general_bg_ratio > 0.8).astype(np.uint8)
-        small_probs_shoes_fg_bigger_bg_mask[small_probs_fg_bigger_bg_mask_black_indices] = shoes_fg_beats_shoes_bg_mask*shoes_fg_beats_general_bg_mask
-        small_or_mask = np.maximum(small_probs_fg_bigger_bg_mask,small_probs_shoes_fg_bigger_bg_mask)
+        shoes_fg_beats_shoes_bg_mask = (shoes_fg_shoes_bg_ratio > 0.75).astype(np.uint8)
+        small_probs_shoes_fg_bigger_bg_mask[small_probs_fg_bigger_bg_mask_black_indices] = shoes_fg_beats_shoes_bg_mask
+        '''draw'''
+        small_probs_shoes_fg_bigger_bg_mask_indices = np.where(small_probs_shoes_fg_bigger_bg_mask==1)
+        y_shoes_mean,x_shoes_mean = int(np.mean(small_probs_shoes_fg_bigger_bg_mask_indices[0])),int(np.mean(small_probs_shoes_fg_bigger_bg_mask_indices[1]))
+        # image = np.copy(small_frame_bgr)
+        # image = cv2.circle(image, (x_shoes_mean, y_shoes_mean), 5, (0, 255, 0), 2)
+        # # Displaying the image
+        # cv2.imshow('sas', image)
+        # cv2.waitKey(0)
+        small_or_mask = np.zeros(small_probs_fg_bigger_bg_mask.shape)
+        DELTA_Y = 0
+        small_or_mask[:y_shoes_mean-DELTA_Y,:] = small_probs_fg_bigger_bg_mask[:y_shoes_mean-DELTA_Y,:]
+        small_or_mask[y_shoes_mean-DELTA_Y:,:] = np.maximum(small_probs_fg_bigger_bg_mask[y_shoes_mean-DELTA_Y:,:],small_probs_shoes_fg_bigger_bg_mask[y_shoes_mean-DELTA_Y:,:]).astype(np.uint8)
+
         cv2.imwrite(f'after_kde_after_shoes_{frame_index}.png',apply_mask_on_color_frame(small_frame_bgr, small_or_mask))
+
+        small_or_mask[y_shoes_mean-DELTA_Y:,:] = cv2.morphologyEx(small_or_mask[y_shoes_mean-DELTA_Y:,:], cv2.MORPH_CLOSE, np.ones((1,20)))
+        small_or_mask[y_shoes_mean-DELTA_Y:,:] = cv2.morphologyEx(small_or_mask[y_shoes_mean-DELTA_Y:,:], cv2.MORPH_CLOSE, disk_kernel(12))
+
+        # small_or_mask[-270:,:] = cv2.medianBlur(small_or_mask[-270:,:], 13)
+        cv2.imwrite(f'after_morphologic_{frame_index}.png',apply_mask_on_color_frame(small_frame_bgr, small_or_mask))
+
 
 
     # write_video(output_path='knn_contours_after_close6_and_median7_frames_sv_and_blue.avi', frames=contours_colors_list, fps=fps, out_size=(w,h), is_color=True)
