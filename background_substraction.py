@@ -127,8 +127,8 @@ def background_substraction(input_video_path):
                                                                 foreground_pdf_memoization=foreground_pdf_memoization)
 
         mask_fine_tuned_after_contours_list.append(mask_fine_tuned_after_contours)
-        cv2.imwrite(f'BS_BEFORE_{frame_index}.png',apply_mask_on_color_frame(frames_bgr[frame_index],
-                                                                                mask_fine_tuned_after_contours_list ))  # TODO - DELETE
+        cv2.imwrite(f'BS_BEFORE_SHOES_AND_SIGNS{frame_index}.png',apply_mask_on_color_frame(frames_bgr[frame_index],
+                                                                                mask_fine_tuned_after_contours))  # TODO - DELETE
 
 
     shoes_foreground_specialist_pdf = build_shoes_pdf(original_frame=frames_bgr[6],
@@ -170,7 +170,7 @@ def background_substraction(input_video_path):
         removed_signs_color_frame_list.append(removed_signs_color_frame)
         removed_signs_mask_list.append(scale_matrix_0_to_255(mask_fine_tuned_with_shoes_remove_signs))
 
-        cv2.imwrite(f'BS_AFTER_FIX_{frame_index}.png',removed_signs_color_frame)  # TODO - DELETE
+        cv2.imwrite(f'BS_AFTER_SHOES_AND_SIGNS_{frame_index}.png',removed_signs_color_frame)  # TODO - DELETE
 
     write_video('binary.avi', frames=removed_signs_mask_list, fps=fps, out_size=(w, h),
                 is_color=False)

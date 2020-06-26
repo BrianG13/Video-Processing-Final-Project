@@ -5,7 +5,7 @@ from tracking import track_video
 import cv2
 
 
-stabilize_video('INPUT_SHORT.avi')
+stabilize_video('INPUT.avi')
 background_substraction('stabilize.avi')
 video_matting('stabilize.avi','binary.avi',cv2.imread('background.jpg'))
 track_video('matted.avi')
