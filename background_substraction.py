@@ -30,7 +30,7 @@ from fine_tune_background_substraction import (
 
 def background_substraction(input_video_path):
     # Read input video
-    cap, out, w, h, fps = get_video_files(path=input_video_path, is_color=True)
+    cap, w, h, fps = get_video_files(path=input_video_path)
     # Get frame count
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -207,7 +207,7 @@ def background_substraction(input_video_path):
                 is_color=False)
     write_video('background_substraction.avi', frames=removed_signs_color_frame_list, fps=fps, out_size=(w, h),
                 is_color=True)
-    release_video_files(cap, out)
+    release_video_files(cap)
 
 
 def build_person_mask_for_kde(frame):

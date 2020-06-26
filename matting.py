@@ -11,15 +11,20 @@ from constants import (
     R
 )
 from kernel_estimation import estimate_pdf
-from utils import load_entire_video, get_video_files, choose_indices_for_foreground, choose_indices_for_background, \
-    apply_mask_on_color_frame, write_video, fixBorder
+from utils import (
+    load_entire_video,
+    get_video_files,
+    choose_indices_for_foreground,
+    choose_indices_for_background,
+    write_video,
+    fixBorder
+)
 
 
-def video_matting(input_stabilize_video, binary_video_path,
-                  new_background, transforms_list):
+def video_matting(input_stabilize_video, binary_video_path,new_background):
     # Read input video
-    cap_stabilize, _, w, h, fps_stabilize = get_video_files(path=input_stabilize_video, is_color=True)
-    cap_binary, _, _, _, fps_binary = get_video_files(path=binary_video_path, is_color=False)
+    cap_stabilize, w, h, fps_stabilize = get_video_files(path=input_stabilize_video)
+    cap_binary, _, _, fps_binary = get_video_files(path=binary_video_path)
 
     # Get frame count
     n_frames = int(cap_stabilize.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -108,6 +113,7 @@ def video_matting(input_stabilize_video, binary_video_path,
         full_alpha_frame = (full_alpha_frame * 255).astype(np.uint8)
         alpha_frames_list.append(full_alpha_frame)
 
+    transforms_list = np.load('TEMP/transforms_video_stab.np')
     create_unstabilized_alpha(transforms_list=transforms_list, alpha_frames_list=alpha_frames_list, fps=fps_stabilize)
     write_video(output_path='matted.avi', frames=full_matted_frames_list, fps=fps_stabilize,out_size=(w, h), is_color=True)
     write_video(output_path='alpha.avi', frames=alpha_frames_list, fps=fps_stabilize, out_size=(w, h), is_color=False)

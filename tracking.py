@@ -4,7 +4,7 @@ from utils import get_video_files, load_entire_video, write_video
 
 
 def track_video(input_video_path):
-    cap_stabilize, _, W, H, fps = get_video_files(path=input_video_path, is_color=True)
+    cap_stabilize, video_width, video_height, fps = get_video_files(path=input_video_path)
     frames_bgr = load_entire_video(cap_stabilize, color_space='bgr')
     font, bottom_left_corner_of_text,font_scale,font_color,line_type = cv2.FONT_HERSHEY_SIMPLEX, (50, 50), 1,(0, 0, 255), 2
 
@@ -42,6 +42,6 @@ def track_video(input_video_path):
         tracked_img = cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
         tracking_frames_list.append(tracked_img)
 
-    write_video('OUTPUT.avi', tracking_frames_list, fps, (W, H), is_color=True)
+    write_video('OUTPUT.avi', tracking_frames_list, fps, (video_width, video_height), is_color=True)
 
 
