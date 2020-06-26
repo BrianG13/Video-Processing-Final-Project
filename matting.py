@@ -10,14 +10,14 @@ from constants import (
     KDE_BW,
     R
 )
-from kernel_estimation import estimate_pdf
 from utils import (
     load_entire_video,
     get_video_files,
     choose_indices_for_foreground,
     choose_indices_for_background,
     write_video,
-    fixBorder
+    fixBorder,
+    estimate_pdf
 )
 
 
@@ -113,13 +113,16 @@ def video_matting(input_stabilize_video, binary_video_path,new_background):
         full_alpha_frame = (full_alpha_frame * 255).astype(np.uint8)
         alpha_frames_list.append(full_alpha_frame)
 
-    transforms_list = np.load('TEMP/transforms_video_stab.np')
-    create_unstabilized_alpha(transforms_list=transforms_list, alpha_frames_list=alpha_frames_list, fps=fps_stabilize)
+        cv2.imwrite(f'MATTING_{frame_index}.png',full_matted_frame)  # TODO - DELETE
+
+
+    create_unstabilized_alpha(alpha_frames_list=alpha_frames_list, fps=fps_stabilize)
     write_video(output_path='matted.avi', frames=full_matted_frames_list, fps=fps_stabilize,out_size=(w, h), is_color=True)
     write_video(output_path='alpha.avi', frames=alpha_frames_list, fps=fps_stabilize, out_size=(w, h), is_color=False)
 
 
-def create_unstabilized_alpha(transforms_list, alpha_frames_list, fps):
+def create_unstabilized_alpha(alpha_frames_list, fps):
+    transforms_list = np.load('TEMP/transforms_video_stab.np')
     unstabilized_frames_list = [alpha_frames_list[0]]
     h, w = alpha_frames_list[0].shape
     for i in range(len(alpha_frames_list) - 1):

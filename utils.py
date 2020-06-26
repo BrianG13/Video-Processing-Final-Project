@@ -1,9 +1,5 @@
-LEGS_HEIGHT = 805
-SHOES_HEIGHT = 870
-SHOULDERS_HEIGHT = 405
-OVERHEAD_HEIGHT = 160
-FRAME_INDEX_FOR_FACE_TUNING = 145
-FRAME_INDEX_FOR_SHOES_TUNING = 0
+
+
 
 def check_in_dict(dict, element, function):
     if element in dict:
@@ -11,22 +7,25 @@ def check_in_dict(dict, element, function):
     else:
         dict[element] = function(np.asarray(element))[0]
         return dict[element]
-    
+
 
 import numpy as np
 import cv2
+from scipy.stats import gaussian_kde
+
 
 def fixBorder(frame):
-    h,w = frame.shape
+    h, w = frame.shape[0],frame.shape[1]
     # Scale the image 4% without moving the center
     T = cv2.getRotationMatrix2D((w / 2, h / 2), 0, 1.04)
     frame = cv2.warpAffine(frame, T, (w, h))
     return frame
 
+
 def get_video_files(path):
     cap = cv2.VideoCapture(path)
     fps = cap.get(cv2.CAP_PROP_FPS)
-    width,height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    width, height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     return cap, width, height, fps
 
 
@@ -120,7 +119,16 @@ def choose_indices_for_background(mask, number_of_choices):
     return np.column_stack((indices[0][indices_choices], indices[1][indices_choices]))
 
 
+def estimate_pdf(original_frame, indices, bw_method):
+    omega_f_values = original_frame[indices[:, 0], indices[:, 1], :]
+    pdf = gaussian_kde(omega_f_values.T, bw_method=bw_method)
+    return lambda x: pdf(x.T)
 
+
+def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
+    """Kernel Density Estimation with Scipy"""
+    kde = gaussian_kde(x, bw_method=bandwidth / x.std(ddof=1), **kwargs)
+    return kde.evaluate(x_grid)
 
 # font = cv2.FONT_HERSHEY_SIMPLEX
 # bottomLeftCornerOfText = (10, 50)
