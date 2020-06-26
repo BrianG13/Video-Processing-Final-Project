@@ -115,14 +115,13 @@ def video_matting(input_stabilize_video, binary_video_path,new_background):
 
         cv2.imwrite(f'MATTING_{frame_index}.png',full_matted_frame)  # TODO - DELETE
 
-
     create_unstabilized_alpha(alpha_frames_list=alpha_frames_list, fps=fps_stabilize)
     write_video(output_path='matted.avi', frames=full_matted_frames_list, fps=fps_stabilize,out_size=(w, h), is_color=True)
     write_video(output_path='alpha.avi', frames=alpha_frames_list, fps=fps_stabilize, out_size=(w, h), is_color=False)
 
 
 def create_unstabilized_alpha(alpha_frames_list, fps):
-    transforms_list = np.load('TEMP/transforms_video_stab.np')
+    transforms_list = np.load('TEMP/transforms_video_stab.np',allow_pickle=True)
     unstabilized_frames_list = [alpha_frames_list[0]]
     h, w = alpha_frames_list[0].shape
     for i in range(len(alpha_frames_list) - 1):

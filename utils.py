@@ -109,15 +109,22 @@ def apply_mask_on_color_frame(frame, mask):
 
 def choose_indices_for_foreground(mask, number_of_choices):
     indices = np.where(mask == 1)
+    if len(indices[0]) == 0:
+        return np.column_stack((indices[0],indices[1]))
     indices_choices = np.random.choice(len(indices[0]), number_of_choices)
     return np.column_stack((indices[0][indices_choices], indices[1][indices_choices]))
 
 
 def choose_indices_for_background(mask, number_of_choices):
     indices = np.where(mask == 0)
+    if len(indices[0]) == 0:
+        return np.column_stack((indices[0],indices[1]))
     indices_choices = np.random.choice(len(indices[0]), number_of_choices)
     return np.column_stack((indices[0][indices_choices], indices[1][indices_choices]))
 
+def new_estimate_pdf(omega_values, bw_method):
+    pdf = gaussian_kde(omega_values.T, bw_method=bw_method)
+    return lambda x: pdf(x.T)
 
 def estimate_pdf(original_frame, indices, bw_method):
     omega_f_values = original_frame[indices[:, 0], indices[:, 1], :]
@@ -130,6 +137,8 @@ def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
     kde = gaussian_kde(x, bw_method=bandwidth / x.std(ddof=1), **kwargs)
     return kde.evaluate(x_grid)
 
+def disk_kernel(size):
+    return cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(size,size))
 # font = cv2.FONT_HERSHEY_SIMPLEX
 # bottomLeftCornerOfText = (10, 50)
 # fontScale = 3
