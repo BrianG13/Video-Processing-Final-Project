@@ -61,38 +61,6 @@ def background_substraction(input_video_path):
     ''''''
     for frame_index, frame in enumerate(frames_bgr):
         print(f"[BS] - Frame: {frame_index} / {n_frames}")
-        '''COMMENTING THIS, LOADING FRAME 92, SO ALL THIS CALCULCATIONS OVER TIME ARE NOT NECESSARY'''
-        # curr = frame
-        # curr_hsv = cv2.cvtColor(curr, cv2.COLOR_BGR2HSV)
-        # curr_h, curr_s, curr_v = cv2.split(curr_hsv)
-        # curr_b, curr_g, curr_r = cv2.split(curr)
-        # diff_s = np.abs(medians_frame_s - curr_s).astype(np.uint8)
-        # s_diff_from_median_list.append(diff_s)
-        # diff_v = np.abs(medians_frame_v - curr_v).astype(np.uint8)
-        # v_diff_from_median_list.append(diff_v)
-        # diff_b = np.abs(medians_frame_b - curr_b).astype(np.uint8)
-        # b_diff_from_median_list.append(diff_b)
-        # mask_s = (diff_s > np.mean(diff_s) * 5)
-        # mask_v = (diff_v > np.mean(diff_v) * 5)
-        # mask_or = (mask_s | mask_v).astype(np.uint8)
-
-        # weighted_mask = scale_matrix_0_to_255(
-        #     (0.5 * (diff_s - np.mean(diff_s) * 5) + 0.5 * (diff_v - np.mean(diff_v) * 7) > 0).astype(np.uint8))
-
-        # kernel = np.ones((1, 1), np.uint8)
-        # dilation = cv2.dilate(mask_or, kernel, iterations=1)
-        #
-        # frame_after_or_flt = apply_mask_on_color_frame(curr, dilation)
-        # original_with_or_mask_results.append(frame_after_or_flt)
-        #
-        # # Filtering blue colors
-        # blue_mask = (curr_b < 140).astype(np.uint8)
-        # blue_kernel = np.ones((3, 3), np.uint8)
-        # blue_mask = cv2.erode(blue_mask, blue_kernel, iterations=2).astype(np.uint8)
-        # frame_after_or_and_blue_flt = apply_mask_on_color_frame(frame_after_or_flt, blue_mask)
-        # original_with_or_mask_and_blue_results.append(frame_after_or_and_blue_flt)
-        '''END OF BIG COMMENT'''
-        # TODO - COMMENTS LOADING HACK!
 
         ''' Get probability for each pixel to be in bg or fg '''
         row_stacked_original_frame = frame.reshape((h * w), 3)
