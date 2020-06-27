@@ -139,6 +139,7 @@ def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
 
 def disk_kernel(size):
     return cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(size,size))
+
 # font = cv2.FONT_HERSHEY_SIMPLEX
 # bottomLeftCornerOfText = (10, 50)
 # fontScale = 3
@@ -169,3 +170,4 @@ def disk_kernel(size):
 # Displaying the image
 # cv2.imshow('sas', image)
 # cv2.waitKey(0)
+
