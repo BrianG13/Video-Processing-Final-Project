@@ -1,9 +1,15 @@
 import numpy as np
 import cv2
 from utils import get_video_files, load_entire_video, write_video
+import logging
+
+
+my_logger = logging.getLogger('MyLogger')
 
 
 def track_video(input_video_path):
+    my_logger.info('Starting Tracking')
+
     cap_stabilize, video_width, video_height, fps = get_video_files(path=input_video_path)
     frames_bgr = load_entire_video(cap_stabilize, color_space='bgr')
     font, bottom_left_corner_of_text, font_scale, font_color, line_type = cv2.FONT_HERSHEY_SIMPLEX, (50, 50), 1, (
@@ -44,3 +50,7 @@ def track_video(input_video_path):
         tracking_frames_list.append(tracked_img)
 
     write_video('OUTPUT.avi', tracking_frames_list, fps, (video_width, video_height), is_color=True)
+    print('~~~~~~~~~~~ [Tracking] FINISHED! ~~~~~~~~~~~')
+    print('~~~~~~~~~~~ OUTPUT.avi has been created! ~~~~~~~~~~~')
+    my_logger.info('Finished Tracking')
+    my_logger.info('OUTPUT.avi has been created!')

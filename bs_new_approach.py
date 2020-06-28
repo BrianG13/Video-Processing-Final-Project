@@ -1,3 +1,5 @@
+import time
+import logging
 import cv2
 import numpy as np
 
@@ -23,11 +25,13 @@ from utils import (
     choose_indices_for_foreground,
     choose_indices_for_background,
     new_estimate_pdf,
-    check_in_dict
+    check_in_dict, scale_matrix_0_to_255
 )
+my_logger = logging.getLogger('MyLogger')
 
 
-def background_substraction(input_video_path):
+def background_subtraction(input_video_path):
+    my_logger.info('Starting Background Subtraction')
     # Read input video
     cap, w, h, fps = get_video_files(path=input_video_path)
     # Get frame count
@@ -35,25 +39,28 @@ def background_substraction(input_video_path):
     frames_hsv = load_entire_video(cap, color_space='hsv')
     n_frames = len(frames_bgr)
 
-    '''COMMENTED OUT WHEN REMOVING LOADING HACK! LOOK FOR TODO'''
     backSub = cv2.createBackgroundSubtractorKNN()
-    mask_list = np.zeros((n_frames, h, w))
-    print(f"[BS] - createBackgroundSubtractorKNN Studying Frames history")
+    mask_list = np.zeros((n_frames, h, w)).astype(np.uint8)
+    print(f"[BS] - BackgroundSubtractorKNN Studying Frames history")
+    now = time.time() #TODO DELETE
     for j in range(8):
+        print(f"[BS] - BackgroundSubtractorKNN {j+1} / 8 pass")
         for index_frame, frame in enumerate(frames_hsv):
             frame_sv = frame[:, :, 1:]
             fgMask = backSub.apply(frame_sv)
             fgMask = (fgMask > 200).astype(np.uint8)
             mask_list[index_frame] = fgMask
-    print(f"[BS] - createBackgroundSubtractorKNN Finished")
+    print(f"[BS] - BackgroundSubtractorKNN Finished")
+    print(f"[BS] - BackgroundSubtractorKNN Time: {time.time()-now}")  #TODO DELETE
 
     omega_f_colors, omega_b_colors = None, None
     omega_f_shoes_colors, omega_b_shoes_colors = None, None
     person_and_blue_mask_list = np.zeros((n_frames, h, w))
+    '''Collecting colors for building body & shoes KDEs'''
     for frame_index, frame in enumerate(frames_bgr):
         print(f"[BS] - Collecting colors for building body & shoes KDEs , Frame: {frame_index+1} / {n_frames}")
         blue_frame, _, _ = cv2.split(frame)
-        mask_for_frame = mask_list[frame_index]
+        mask_for_frame = mask_list[frame_index].astype(np.uint8)
         mask_for_frame = cv2.morphologyEx(mask_for_frame, cv2.MORPH_CLOSE, disk_kernel(6))
         mask_for_frame = cv2.medianBlur(mask_for_frame, 7)
         _, contours, _ = cv2.findContours(mask_for_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -93,6 +100,7 @@ def background_substraction(input_video_path):
     foreground_pdf_memoization, background_pdf_memoization = dict(), dict()
     foreground_shoes_pdf_memoization, background_shoes_pdf_memoization = dict(), dict()
     or_mask_list = np.zeros((n_frames, h, w))
+    '''Filtering with KDEs general body parts & shoes'''
     for frame_index, frame in enumerate(frames_bgr):
         print(f"[BS] - Filtering with KDEs general body parts & shoes , Frame: {frame_index+1} / {n_frames}")
         person_and_blue_mask = person_and_blue_mask_list[frame_index]
@@ -151,8 +159,10 @@ def background_substraction(input_video_path):
         or_mask[max(0, y_mean - WINDOW_HEIGHT // 2):min(h, y_mean + WINDOW_HEIGHT // 2),
                 max(0, x_mean - WINDOW_WIDTH // 2):min(w, x_mean + WINDOW_WIDTH // 2)] = small_or_mask
         or_mask_list[frame_index] = or_mask
+        cv2.imwrite(f'BS_after_shoes_and_body_{frame_index}.png',apply_mask_on_color_frame(frame,or_mask))
 
     omega_f_face_colors, omega_b_face_colors = None, None
+    '''Collecting colors for building face KDE'''
     for frame_index, frame in enumerate(frames_bgr):
         print(f"[BS] - Collecting colors for building face KDE , Frame: {frame_index+1} / {n_frames}")
         or_mask = or_mask_list[frame_index]
@@ -186,6 +196,7 @@ def background_substraction(input_video_path):
     background_face_pdf = new_estimate_pdf(omega_values=omega_b_face_colors, bw_method=BW_NARROW)
     foreground_face_pdf_memoization, background_face_pdf_memoization = dict(), dict()
     final_masks_list, final_frames_list = [], []
+    '''Final Processing of BS (applying face KDE)'''
     for frame_index, frame in enumerate(frames_bgr):
         print(f"[BS] - Final Processing of BS (applying face KDE) , Frame: {frame_index+1} / {n_frames}")
         or_mask = or_mask_list[frame_index]
@@ -246,13 +257,18 @@ def background_substraction(input_video_path):
         contours.sort(key=cv2.contourArea, reverse=True)
         final_contour_mask = np.zeros(final_mask.shape)
         cv2.fillPoly(final_contour_mask, pts=[contours[0]], color=1)
-        final_mask = final_contour_mask * final_mask
+        final_mask = (final_contour_mask * final_mask).astype(np.uint8)
+        final_masks_list.append(scale_matrix_0_to_255(final_mask))
         final_frames_list.append(apply_mask_on_color_frame(frame=frame, mask=final_mask))
+        cv2.imwrite(f'BS_final_{frame_index}.png',apply_mask_on_color_frame(frame,final_mask))
 
-    write_video(output_path='extracted_2nd_try.avi', frames=final_frames_list, fps=fps, out_size=(w, h), is_color=True)
-    write_video(output_path='binary_2nd_try.avi', frames=final_masks_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video(output_path='extracted.avi', frames=final_frames_list, fps=fps, out_size=(w, h), is_color=True)
+    write_video(output_path='binary.avi', frames=final_masks_list, fps=fps, out_size=(w, h), is_color=False)
+    print('~~~~~~~~~~~ [BS] FINISHED! ~~~~~~~~~~~')
+    print('~~~~~~~~~~~ binary.avi has been created! ~~~~~~~~~~~')
+    print('~~~~~~~~~~~ extracted.avi has been created! ~~~~~~~~~~~')
+    my_logger.info('Finished Background Subtraction')
+    my_logger.info('binary.avi has been created!')
+    my_logger.info('extracted.avi has been created!')
 
     release_video_files(cap)
-
-
-background_substraction('stabilize.avi')

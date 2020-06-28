@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+import logging
 from constants import (
     MAX_CORNERS,
     QUALITY_LEVEL,
@@ -17,9 +17,11 @@ from utils import (
     write_video,
     load_entire_video
 )
+my_logger = logging.getLogger('MyLogger')
 
 
 def stabilize_video(input_video_path):
+    my_logger.info('Starting Video Stabilization')
     cap, w, h, fps = get_video_files(path=input_video_path)
 
     frames_bgr = load_entire_video(cap, color_space='bgr')
@@ -64,7 +66,7 @@ def stabilize_video(input_video_path):
     stabilized_frames_list = [frames_bgr[0]]
     # Write n_frames-1 transformed frames
     for frame_index, frame in enumerate(frames_bgr[:-1]):
-        print(f"[Video Stabilization] Applying warps to frame: {frame_index+1} / {n_frames - 1}")
+        print(f'[Video Stabilization] Applying warps to frame: {frame_index+1} / {n_frames - 1}')
         # Apply affine wrapping to the given frame
         transform_matrix = transforms_smooth[frame_index].reshape((3, 3))
 
@@ -75,4 +77,8 @@ def stabilize_video(input_video_path):
 
     release_video_files(cap)
     write_video('stabilize.avi', stabilized_frames_list, fps, (w, h), is_color=True)
-    transforms_list.dump('TEMP/transforms_video_stab.np')
+    transforms_list.dump('Temp/transforms_video_stab.np')
+    print('~~~~~~~~~~~ [Video Stabilization] FINISHED! ~~~~~~~~~~~')
+    print('~~~~~~~~~~~ stabilize.avi has been created! ~~~~~~~~~~~')
+    my_logger.info('Finished Video Stabilization')
+    my_logger.info('stabilize.avi has been created!')
