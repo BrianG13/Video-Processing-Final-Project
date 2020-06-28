@@ -49,8 +49,7 @@ def track_video(input_video_path):
         tracked_img = cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
         tracking_frames_list.append(tracked_img)
 
-    write_video('OUTPUT.avi', tracking_frames_list, fps, (video_width, video_height), is_color=True)
+    write_video('../Outputs/OUTPUT.avi', tracking_frames_list, fps, (video_width, video_height), is_color=True)
     print('~~~~~~~~~~~ [Tracking] FINISHED! ~~~~~~~~~~~')
     print('~~~~~~~~~~~ OUTPUT.avi has been created! ~~~~~~~~~~~')
     my_logger.info('Finished Tracking')
-    my_logger.info('OUTPUT.avi has been created!')

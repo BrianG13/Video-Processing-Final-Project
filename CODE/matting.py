@@ -114,9 +114,9 @@ def video_matting(input_stabilize_video, binary_video_path, new_background):
         alpha_frames_list.append(full_alpha_frame)
 
     create_unstabilized_alpha(alpha_frames_list=alpha_frames_list, fps=fps_stabilize)
-    write_video(output_path='matted.avi', frames=full_matted_frames_list, fps=fps_stabilize, out_size=(w, h),
+    write_video(output_path='../Outputs/matted.avi', frames=full_matted_frames_list, fps=fps_stabilize, out_size=(w, h),
                 is_color=True)
-    write_video(output_path='alpha.avi', frames=alpha_frames_list, fps=fps_stabilize, out_size=(w, h), is_color=False)
+    write_video(output_path='../Outputs/alpha.avi', frames=alpha_frames_list, fps=fps_stabilize, out_size=(w, h), is_color=False)
     print('~~~~~~~~~~~ [Matting] FINISHED! ~~~~~~~~~~~')
     print('~~~~~~~~~~~ matted.avi has been created! ~~~~~~~~~~~')
     print('~~~~~~~~~~~ alpha.avi has been created! ~~~~~~~~~~~')
@@ -125,7 +125,7 @@ def video_matting(input_stabilize_video, binary_video_path, new_background):
 
 
 def create_unstabilized_alpha(alpha_frames_list, fps):
-    transforms_list = np.load('Temp/transforms_video_stab.np', allow_pickle=True)
+    transforms_list = np.load('../Temp/transforms_video_stab.np', allow_pickle=True)
     unstabilized_frames_list = [alpha_frames_list[0]]
     h, w = alpha_frames_list[0].shape
     for i in range(len(alpha_frames_list) - 1):
@@ -134,4 +134,4 @@ def create_unstabilized_alpha(alpha_frames_list, fps):
         unstabilized_frame = fixBorder(unstabilized_frame)
         unstabilized_frames_list.append(unstabilized_frame)
 
-    write_video('unstabilized_alpha.avi', frames=unstabilized_frames_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video('../Outputs/unstabilized_alpha.avi', frames=unstabilized_frames_list, fps=fps, out_size=(w, h), is_color=False)

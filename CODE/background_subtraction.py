@@ -26,6 +26,7 @@ from utils import (
     new_estimate_pdf,
     check_in_dict, scale_matrix_0_to_255
 )
+
 my_logger = logging.getLogger('MyLogger')
 
 
@@ -42,7 +43,7 @@ def background_subtraction(input_video_path):
     mask_list = np.zeros((n_frames, h, w)).astype(np.uint8)
     print(f"[BS] - BackgroundSubtractorKNN Studying Frames history")
     for j in range(8):
-        print(f"[BS] - BackgroundSubtractorKNN {j+1} / 8 pass")
+        print(f"[BS] - BackgroundSubtractorKNN {j + 1} / 8 pass")
         for index_frame, frame in enumerate(frames_hsv):
             frame_sv = frame[:, :, 1:]
             fgMask = backSub.apply(frame_sv)
@@ -55,7 +56,7 @@ def background_subtraction(input_video_path):
     person_and_blue_mask_list = np.zeros((n_frames, h, w))
     '''Collecting colors for building body & shoes KDEs'''
     for frame_index, frame in enumerate(frames_bgr):
-        print(f"[BS] - Collecting colors for building body & shoes KDEs , Frame: {frame_index+1} / {n_frames}")
+        print(f"[BS] - Collecting colors for building body & shoes KDEs , Frame: {frame_index + 1} / {n_frames}")
         blue_frame, _, _ = cv2.split(frame)
         mask_for_frame = mask_list[frame_index].astype(np.uint8)
         mask_for_frame = cv2.morphologyEx(mask_for_frame, cv2.MORPH_CLOSE, disk_kernel(6))
@@ -99,7 +100,7 @@ def background_subtraction(input_video_path):
     or_mask_list = np.zeros((n_frames, h, w))
     '''Filtering with KDEs general body parts & shoes'''
     for frame_index, frame in enumerate(frames_bgr):
-        print(f"[BS] - Filtering with KDEs general body parts & shoes , Frame: {frame_index+1} / {n_frames}")
+        print(f"[BS] - Filtering with KDEs general body parts & shoes , Frame: {frame_index + 1} / {n_frames}")
         person_and_blue_mask = person_and_blue_mask_list[frame_index]
         person_and_blue_mask_indices = np.where(person_and_blue_mask == 1)
         y_mean, x_mean = int(np.mean(person_and_blue_mask_indices[0])), int(np.mean(person_and_blue_mask_indices[1]))
@@ -119,7 +120,7 @@ def background_subtraction(input_video_path):
             map(lambda elem: check_in_dict(background_pdf_memoization, elem, background_pdf),
                 map(tuple, small_frame_bgr[small_person_and_blue_mask_indices])), dtype=float)
         small_probs_fg_bigger_bg_mask[small_person_and_blue_mask_indices] = (
-                    small_foreground_probabilities_stacked > small_background_probabilities_stacked).astype(np.uint8)
+                small_foreground_probabilities_stacked > small_background_probabilities_stacked).astype(np.uint8)
 
         '''Shoes restoration'''
         smaller_upper_white_mask = np.copy(small_probs_fg_bigger_bg_mask)
@@ -135,7 +136,7 @@ def background_subtraction(input_video_path):
                 map(tuple, small_frame_bgr[small_probs_fg_bigger_bg_mask_black_indices])), dtype=float)
 
         shoes_fg_shoes_bg_ratio = small_shoes_foreground_probabilities_stacked / (
-                    small_shoes_foreground_probabilities_stacked + small_shoes_background_probabilities_stacked)
+                small_shoes_foreground_probabilities_stacked + small_shoes_background_probabilities_stacked)
         shoes_fg_beats_shoes_bg_mask = (shoes_fg_shoes_bg_ratio > 0.75).astype(np.uint8)
         small_probs_shoes_fg_bigger_bg_mask[small_probs_fg_bigger_bg_mask_black_indices] = shoes_fg_beats_shoes_bg_mask
         small_probs_shoes_fg_bigger_bg_mask_indices = np.where(small_probs_shoes_fg_bigger_bg_mask == 1)
@@ -144,7 +145,8 @@ def background_subtraction(input_video_path):
         small_or_mask = np.zeros(small_probs_fg_bigger_bg_mask.shape)
         small_or_mask[:y_shoes_mean, :] = small_probs_fg_bigger_bg_mask[:y_shoes_mean, :]
         small_or_mask[y_shoes_mean:, :] = np.maximum(small_probs_fg_bigger_bg_mask[y_shoes_mean:, :],
-                                        small_probs_shoes_fg_bigger_bg_mask[y_shoes_mean:, :]).astype(np.uint8)
+                                                     small_probs_shoes_fg_bigger_bg_mask[y_shoes_mean:, :]).astype(
+            np.uint8)
 
         DELTA_Y = 30
         small_or_mask[y_shoes_mean - DELTA_Y:, :] = cv2.morphologyEx(small_or_mask[y_shoes_mean - DELTA_Y:, :],
@@ -154,13 +156,13 @@ def background_subtraction(input_video_path):
 
         or_mask = np.zeros(person_and_blue_mask.shape)
         or_mask[max(0, y_mean - WINDOW_HEIGHT // 2):min(h, y_mean + WINDOW_HEIGHT // 2),
-                max(0, x_mean - WINDOW_WIDTH // 2):min(w, x_mean + WINDOW_WIDTH // 2)] = small_or_mask
+        max(0, x_mean - WINDOW_WIDTH // 2):min(w, x_mean + WINDOW_WIDTH // 2)] = small_or_mask
         or_mask_list[frame_index] = or_mask
 
     omega_f_face_colors, omega_b_face_colors = None, None
     '''Collecting colors for building face KDE'''
     for frame_index, frame in enumerate(frames_bgr):
-        print(f"[BS] - Collecting colors for building face KDE , Frame: {frame_index+1} / {n_frames}")
+        print(f"[BS] - Collecting colors for building face KDE , Frame: {frame_index + 1} / {n_frames}")
         or_mask = or_mask_list[frame_index]
         face_mask = np.copy(or_mask)
         face_mask[SHOULDERS_HEIGHT:, :] = 0
@@ -194,7 +196,7 @@ def background_subtraction(input_video_path):
     final_masks_list, final_frames_list = [], []
     '''Final Processing of BS (applying face KDE)'''
     for frame_index, frame in enumerate(frames_bgr):
-        print(f"[BS] - Final Processing of BS (applying face KDE) , Frame: {frame_index+1} / {n_frames}")
+        print(f"[BS] - Final Processing of BS (applying face KDE) , Frame: {frame_index + 1} / {n_frames}")
         or_mask = or_mask_list[frame_index]
         face_mask = np.copy(or_mask)
         face_mask[SHOULDERS_HEIGHT:, :] = 0
@@ -221,7 +223,8 @@ def background_subtraction(input_video_path):
         small_face_background_probabilities = small_face_background_probabilities_stacked.reshape(small_face_mask.shape)
         small_probs_face_fg_bigger_face_bg_mask = (
                 small_face_foreground_probabilities > small_face_background_probabilities).astype(np.uint8)
-        small_probs_face_fg_bigger_face_bg_mask_laplacian = cv2.Laplacian(small_probs_face_fg_bigger_face_bg_mask, cv2.CV_32F)
+        small_probs_face_fg_bigger_face_bg_mask_laplacian = cv2.Laplacian(small_probs_face_fg_bigger_face_bg_mask,
+                                                                          cv2.CV_32F)
         small_probs_face_fg_bigger_face_bg_mask_laplacian = np.abs(small_probs_face_fg_bigger_face_bg_mask_laplacian)
         small_probs_face_fg_bigger_face_bg_mask = np.maximum(
             small_probs_face_fg_bigger_face_bg_mask - small_probs_face_fg_bigger_face_bg_mask_laplacian, 0)
@@ -240,7 +243,7 @@ def background_subtraction(input_video_path):
 
         final_mask = np.copy(or_mask).astype(np.uint8)
         final_mask[max(0, y_mean - FACE_WINDOW_HEIGHT // 2):min(h, y_mean + FACE_WINDOW_HEIGHT // 2),
-                   max(0, x_mean - FACE_WINDOW_WIDTH // 2):min(w, x_mean + FACE_WINDOW_WIDTH // 2)] = small_contour_mask
+        max(0, x_mean - FACE_WINDOW_WIDTH // 2):min(w, x_mean + FACE_WINDOW_WIDTH // 2)] = small_contour_mask
 
         final_mask[max(0, y_mean - FACE_WINDOW_HEIGHT // 2):LEGS_HEIGHT, :] = cv2.morphologyEx(
             final_mask[max(0, y_mean - FACE_WINDOW_HEIGHT // 2):LEGS_HEIGHT, :], cv2.MORPH_OPEN,
@@ -257,12 +260,11 @@ def background_subtraction(input_video_path):
         final_masks_list.append(scale_matrix_0_to_255(final_mask))
         final_frames_list.append(apply_mask_on_color_frame(frame=frame, mask=final_mask))
 
-    write_video(output_path='extracted.avi', frames=final_frames_list, fps=fps, out_size=(w, h), is_color=True)
-    write_video(output_path='binary.avi', frames=final_masks_list, fps=fps, out_size=(w, h), is_color=False)
+    write_video(output_path='../Outputs/extracted.avi', frames=final_frames_list, fps=fps, out_size=(w, h), is_color=True)
+    write_video(output_path='../Outputs/binary.avi', frames=final_masks_list, fps=fps, out_size=(w, h), is_color=False)
     print('~~~~~~~~~~~ [BS] FINISHED! ~~~~~~~~~~~')
     print('~~~~~~~~~~~ binary.avi has been created! ~~~~~~~~~~~')
     print('~~~~~~~~~~~ extracted.avi has been created! ~~~~~~~~~~~')
     my_logger.info('Finished Background Subtraction')
-
 
     release_video_files(cap)

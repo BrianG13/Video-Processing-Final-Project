@@ -76,9 +76,8 @@ def stabilize_video(input_video_path):
         transforms_list[frame_index] = transform_matrix
 
     release_video_files(cap)
-    write_video('stabilize.avi', stabilized_frames_list, fps, (w, h), is_color=True)
-    transforms_list.dump('Temp/transforms_video_stab.np')
+    write_video('../Outputs/stabilize.avi', stabilized_frames_list, fps, (w, h), is_color=True)
+    transforms_list.dump('../Temp/transforms_video_stab.np')
     print('~~~~~~~~~~~ [Video Stabilization] FINISHED! ~~~~~~~~~~~')
     print('~~~~~~~~~~~ stabilize.avi has been created! ~~~~~~~~~~~')
     my_logger.info('Finished Video Stabilization')
-    my_logger.info('stabilize.avi has been created!')
