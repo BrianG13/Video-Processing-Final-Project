@@ -1,4 +1,3 @@
-import time
 import logging
 import cv2
 import numpy as np
@@ -42,7 +41,6 @@ def background_subtraction(input_video_path):
     backSub = cv2.createBackgroundSubtractorKNN()
     mask_list = np.zeros((n_frames, h, w)).astype(np.uint8)
     print(f"[BS] - BackgroundSubtractorKNN Studying Frames history")
-    now = time.time() #TODO DELETE
     for j in range(8):
         print(f"[BS] - BackgroundSubtractorKNN {j+1} / 8 pass")
         for index_frame, frame in enumerate(frames_hsv):
@@ -51,7 +49,6 @@ def background_subtraction(input_video_path):
             fgMask = (fgMask > 200).astype(np.uint8)
             mask_list[index_frame] = fgMask
     print(f"[BS] - BackgroundSubtractorKNN Finished")
-    print(f"[BS] - BackgroundSubtractorKNN Time: {time.time()-now}")  #TODO DELETE
 
     omega_f_colors, omega_b_colors = None, None
     omega_f_shoes_colors, omega_b_shoes_colors = None, None
@@ -159,7 +156,7 @@ def background_subtraction(input_video_path):
         or_mask[max(0, y_mean - WINDOW_HEIGHT // 2):min(h, y_mean + WINDOW_HEIGHT // 2),
                 max(0, x_mean - WINDOW_WIDTH // 2):min(w, x_mean + WINDOW_WIDTH // 2)] = small_or_mask
         or_mask_list[frame_index] = or_mask
-        cv2.imwrite(f'BS_after_shoes_and_body_{frame_index}.png',apply_mask_on_color_frame(frame,or_mask))
+        cv2.imwrite(f'BS_after_shoes_and_body_{frame_index}.png',apply_mask_on_color_frame(frame,or_mask)) # TODO - DELETE
 
     omega_f_face_colors, omega_b_face_colors = None, None
     '''Collecting colors for building face KDE'''
@@ -260,7 +257,7 @@ def background_subtraction(input_video_path):
         final_mask = (final_contour_mask * final_mask).astype(np.uint8)
         final_masks_list.append(scale_matrix_0_to_255(final_mask))
         final_frames_list.append(apply_mask_on_color_frame(frame=frame, mask=final_mask))
-        cv2.imwrite(f'BS_final_{frame_index}.png',apply_mask_on_color_frame(frame,final_mask))
+        cv2.imwrite(f'BS_final_{frame_index}.png',apply_mask_on_color_frame(frame,final_mask)) # TODO-DELETE
 
     write_video(output_path='extracted.avi', frames=final_frames_list, fps=fps, out_size=(w, h), is_color=True)
     write_video(output_path='binary.avi', frames=final_masks_list, fps=fps, out_size=(w, h), is_color=False)

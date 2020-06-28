@@ -85,7 +85,6 @@ def video_matting(input_stabilize_video, binary_video_path, new_background):
 
         smaller_decided_foreground_mask = (smaller_foreground_distance_map < smaller_background_distance_map - EPSILON_NARROW_BAND).astype(np.uint8)
         smaller_decided_background_mask = (smaller_background_distance_map >= smaller_foreground_distance_map - EPSILON_NARROW_BAND).astype(np.uint8)
-
         '''Building KDEs for foreground & background to calculate priors for alpha calculation'''
         omega_f_indices = choose_indices_for_foreground(smaller_decided_foreground_mask, 200)
         omega_b_indices = choose_indices_for_background(smaller_decided_background_mask, 200)
